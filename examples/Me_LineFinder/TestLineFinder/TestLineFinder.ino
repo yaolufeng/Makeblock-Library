@@ -15,7 +15,6 @@
 #include <Makeblock.h>
 #include <Arduino.h>
 #include <SoftwareSerial.h>
-#include <Servo.h>
 #include <Wire.h>
 
 MeLineFinder lineFinder(3); //Line Finder module can only be connected to PORT_3, PORT_4, PORT_5, PORT_6 of base shield.

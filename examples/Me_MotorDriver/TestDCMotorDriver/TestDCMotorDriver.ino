@@ -14,7 +14,6 @@
 #include <Makeblock.h>
 #include <Arduino.h>
 #include <SoftwareSerial.h>
-#include <Servo.h>
 #include <Wire.h>
 
 MeDCMotor motorDriver1(1);

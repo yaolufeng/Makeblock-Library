@@ -14,9 +14,7 @@
 #include <Makeblock.h>
 #include <Arduino.h>
 #include <SoftwareSerial.h>
-#include <Servo.h>
 #include <Wire.h>
-#include <Serial.h>
 
 MeDCMotor MotorL(M1);  
 MeDCMotor MotorR(M2);
