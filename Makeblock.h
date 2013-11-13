@@ -295,6 +295,7 @@ class MeSerial:public MePort
 		void findParamValue(char* str,int len,char*name);
 		char _cmds[64];
 		int _index;
+		bool _hard;
 		SoftwareSerial swSerial;
 };
 ///@brief class of MeWire

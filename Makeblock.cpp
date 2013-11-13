@@ -104,26 +104,44 @@ void MeWire::write(byte dataAddress, byte data)
 
 /*             Serial                  */
 MeSerial::MeSerial(uint8_t port):MePort(port),swSerial(s1,s2){
-	
+	if(port==PORT_5){
+		_hard = true;
+	}else{
+		_hard = false;
+	}
 }
 void MeSerial::begin(long baudrate){
-	swSerial.begin(baudrate);
+	if(_hard){
+		Serial.begin(baudrate);
+	}else{
+		swSerial.begin(baudrate);
+	}
 }
 size_t MeSerial::write(uint8_t byte){
 	if(_isServoBusy==true)return -1;
+	if(_hard)
+	return Serial.write(byte);
 	return swSerial.write(byte);
 }
 int MeSerial::read(){
 	if(_isServoBusy==true)return -1;
+	if(_hard)
+	return Serial.read();
 	return swSerial.read();
 }
 int MeSerial::available(){
+	if(_hard)
+	return Serial.available();
 	return swSerial.available();
 }
 bool MeSerial::listen(){
+	if(_hard)
+	return true;
 	return swSerial.listen();
 }
 bool MeSerial::isListening(){
+	if(_hard)
+	return true;
 	return swSerial.isListening();
 }
 bool MeSerial::paramAvailable(){
