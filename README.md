@@ -7,6 +7,7 @@ This library is for replacing the Me_Lib_V2.0, the library is rebuild and improv
 
 How to use:
 
-Download files from Github, you will get the folder which includes:Makeblock.h,Makeblock.cpp and other folds named with Me_xx.change the folder name to "Makeblock" if it is not this name. Copy this folder to your Arduino Library path, the library path is similar as follows(maybe some slient different because of different version name):
-
-xxx\arduino-1.0.3-windows\arduino-1.0.3\libraries
+1.Before programming, we have to make a copy of libraries to the Arduino default library path. The default path is usually in "C:\Users\user name\Documents\Arduino\libraries" (Windows 7).
+2.Open the Arduino Application. If already open it, you need to restart.
+3.Click "File->Examples". Here are some test program.
+4.For information on installing libraries, see: http://arduino.cc/en/Guide/Libraries
