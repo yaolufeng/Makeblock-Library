@@ -131,20 +131,17 @@ int MeSerial::read(){
 }
 int MeSerial::available(){
 	if(_hard)
-	return Serial.available();
+		return Serial.available();
 	return swSerial.available();
 }
 bool MeSerial::listen(){
+	if(_hard)
+		return true;
 	return swSerial.listen();
 }
 bool MeSerial::isListening(){
 	if(_hard)
-	return true;
-	return swSerial.listen();
-}
-bool MeSerial::isListening(){
-	if(_hard)
-	return true;
+		return true;
 	return swSerial.isListening();
 }
 bool MeSerial::paramAvailable(){
