@@ -16,7 +16,7 @@
 #include <SoftwareSerial.h>
 #include <Wire.h>
 
-MeLedStrip ledStripDriver(1);
+MeLedStrip ledStripDriver(PORT_1);
 
 void setup()
 {

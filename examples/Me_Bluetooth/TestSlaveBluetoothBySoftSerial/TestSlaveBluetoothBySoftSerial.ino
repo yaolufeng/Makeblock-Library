@@ -19,7 +19,7 @@
 /*
 Blue module can only be connected to port 3, 4, 5, 6 of base shield.
 */
-MeBluetooth bluetooth(4);
+MeBluetooth bluetooth(PORT_4);
 
 void setup()
 {
