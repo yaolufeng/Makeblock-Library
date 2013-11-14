@@ -17,7 +17,7 @@
 #include <SoftwareSerial.h>
 #include <Wire.h>
 
-MeLimitSwitch limitSwitch(4); //Me_LimitSwitch module can only be connected to PORT_3, PORT_4, PORT_5, PORT_6 of base shield.
+MeLimitSwitch limitSwitch(PORT_4); //Me_LimitSwitch module can only be connected to PORT_3, PORT_4, PORT_5, PORT_6 of base shield.
 
 void setup()
 {

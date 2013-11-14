@@ -21,13 +21,15 @@
 Class Me_ServoDriver has most of the functions from class Servo, 
 see Me_ServoDriver.h for more details.
 */
-MeServo servoDriver(1,1);//can ONLY be PORT_1,PORT_2
+MeServo servoDriver(PORT_1,DEV1);//can ONLY be PORT_1,PORT_2
 
 int pos1 = 0;
 int pos2 = 180;
 void setup()
 {
-    servoDriver.begin(0x01, 0x01);
+    servoDriver.begin();
+    //servoDriver.begin(500,2500); //set time plus of the servo
+   //servoDriver.begin(1000,2000);
 }
 
 void loop()

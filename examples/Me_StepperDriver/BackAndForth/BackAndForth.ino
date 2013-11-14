@@ -16,7 +16,7 @@
 #include <SoftwareSerial.h>
 #include <Wire.h>
 
-MeStepperMotor stepperDriver(1);
+MeStepperMotor stepperDriver(PORT_1);
 
 void setup()
 {

@@ -1,9 +1,9 @@
 /*************************************************************************
 * File Name          : TestLineFinder.ino
 * Author             : Steve
-* Updated            : Steve
+* Updated            : Jasen
 * Version            : V1.0.1
-* Date               : 5/27/2013
+* Date               : 11/14/2013
 * Description        : Example for Makeblock Electronic modules of Me - 
                        Line Finder. The module can only be connected to 
                        the PORT_3, PORT_4, PORT_5, and PORT_6 of Me - 
@@ -17,7 +17,7 @@
 #include <SoftwareSerial.h>
 #include <Wire.h>
 
-MeLineFinder lineFinder(3); //Line Finder module can only be connected to PORT_3, PORT_4, PORT_5, PORT_6 of base shield.
+MeLineFinder lineFinder(PORT_3); //Line Finder module can only be connected to PORT_3, PORT_4, PORT_5, PORT_6 of base shield.
 
 void setup()
 {
