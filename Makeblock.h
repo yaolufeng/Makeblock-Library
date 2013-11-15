@@ -38,10 +38,13 @@ extern MePort_Sig mePort[11];//mePort[0] is nonsense
 #define	S1_IN_S2_OUT 0x01 //sensor1 is inside of black line and sensor is outside of black line
 #define	S1_OUT_S2_IN 0x02 //sensor1 is outside of black line and sensor is inside of black line 
 #define	S1_OUT_S2_OUT 0x03 //sensor1 is outside of black line and sensor is outside of black line
-
+//Wire Setup
+#define BEGIN_FLAG  0x1E
+#define BEGIN_STATE  0x91
+ 
 //ledstrip
 //address table
-#define LS_RUN_STATE 0x91
+
 #define LS_CURRENT 0x92
 #define LS_GET_PIXEL_R 0x93
 #define LS_GET_PIXEL_G 0x94
@@ -124,6 +127,7 @@ extern MePort_Sig mePort[11];//mePort[0] is nonsense
 #define STP_EN_CTRL 0x1D
 #define STP_SLEEP_CTRL 0x1F
 #define STP_MS_CTRL 0x20
+#define LS_SET_ST_ADD 0x21
 
 //data table
 #define STP_RUN 0x01
@@ -304,10 +308,13 @@ class MeWire:public MePort
 	public:
 		///@brief initialize
 		///@param port port number of device
-		MeWire(uint8_t port);
+		MeWire(uint8_t port,uint8_t selector);
+		///@brief reset start index of i2c slave address.
+		void setSelectorIndex(uint8_t selectorIndex);
+		bool isRunning();
 		///@brief Initiate the Wire library and join the I2C bus as a master or slave. This should normally be called only once.
 		///@param address the 7-bit slave address (optional); if not specified, join the bus as a master.
-		void begin(int slaveAddress);
+		void begin();
 		///@brief send one byte data request for read one byte from slave address.
 		byte read(byte dataAddress);
 		///@brief send one byte data request for write one byte to slave address.
@@ -385,7 +392,7 @@ class MeLedStrip :public MeWire
 {
 	public:
         ///@brief initialize,portNum can ONLY be PORT_1 or PORT_2
-        MeLedStrip(uint8_t port);
+        MeLedStrip(uint8_t port,uint8_t selector);
         
         ///@brief start ledStrip Driver and set the led quantity. (value: 1-60)
         void begin(int ledCount);
@@ -430,7 +437,7 @@ class MeStepperMotor:public MeWire
 {
 	public:
         ///@brief initialize,portNum can ONLY be PORT_1 or PORT_2
-        MeStepperMotor(uint8_t port);
+        MeStepperMotor(uint8_t port,uint8_t selector);
         
         ///@brief start stepper driver.
         void begin(byte microStep = STP_SIXTEENTH,long speed = 10000,long acceleration = 5000);
