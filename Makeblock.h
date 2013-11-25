@@ -317,6 +317,7 @@ class MeWire:public MePort
 		void begin();
 		///@brief send one byte data request for read one byte from slave address.
 		byte read(byte dataAddress);
+		byte* read(byte dataAddress,int len);
 		///@brief send one byte data request for write one byte to slave address.
         void write(byte dataAddress, byte data);
 	protected:
@@ -573,7 +574,7 @@ public:
 	///@brief as above but also sets min and max values for writes.
 	uint8_t begin(int min, int max);  
 	void detach();
-	///@brief if value is < 200 its treated as an angle, otherwise as pulse width in microseconds 
+	///@brief if value is < 180 its treated as an angle, otherwise as pulse width in microseconds 
 	void write(int value);        
 	///@brief Write pulse width in microseconds 
 	void writeMicroseconds(int value); 

@@ -33,8 +33,8 @@ void loop()
   }
   long stp = stepperDriver.currentPosition(); // get the current position
  
-  if(stp > 54000) // set the limit
+  if(stp > 24000) // set the limit
     stepperDriver.moveTo(0); // Set the target position. Negative is anticlockwise from the 0 position.
   if(stp < 1) // set the limit
-    stepperDriver.moveTo(54001); // set the target position.
+    stepperDriver.moveTo(24001); // set the target position.
 }

@@ -16,12 +16,12 @@
 #include <SoftwareSerial.h>
 #include <Wire.h>
 
-MeLedStrip ledStripDriver(1);
+MeLedStrip ledStripDriver(PORT_1,0x4);
 
 void setup()
 {
   // initialize ledStrip Driver and set the led quantity.
-  ledStripDriver.begin(60);
+  ledStripDriver.begin(30);
 }
 
 int bri = 0, st = 0;
@@ -35,4 +35,3 @@ void loop()
   
   ledStripDriver.setPixelColor(LS_ALL_PIXEL, bri, bri, bri, LS_ONCE_FLASH); // parameter description: led number, red, green, blue, flash mode
 }
-

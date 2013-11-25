@@ -86,17 +86,28 @@ void MeWire::setSelectorIndex(uint8_t selectorIndex)
 {
 	write(LS_SET_ST_ADD,selectorIndex);
 }
-byte MeWire::read(byte dataAddress)
+byte MeWire::read(byte dataAddress){
+	byte *b={0};
+	b = read(dataAddress,1);
+	return b[0];
+}
+byte* MeWire::read(byte dataAddress,int len)
 {
 	byte rxByte;
 	Wire.beginTransmission(_slaveAddress); // transmit to device
 	Wire.write(dataAddress); // sends one byte
 	Wire.endTransmission(); // stop transmitting
 	delayMicroseconds(1);
-	Wire.requestFrom(_slaveAddress,1); // request 6 bytes from slave device
+	Wire.requestFrom(_slaveAddress,len); // request 6 bytes from slave device
+	int index =0;
+	byte b[len];
 	while(Wire.available()) // slave may send less than requested
-		return rxByte = Wire.read(); // receive a byte as character
-	return 0;
+	{
+		rxByte = Wire.read(); // receive a byte as character
+		b[index] = rxByte;
+		index++;
+	}
+	return b;
 }
 
 void MeWire::write(byte dataAddress, byte data)
@@ -852,10 +863,6 @@ static void initISR(timer16_Sequence_t timer)
 #endif
 } 
 
-
-
-
-
 /****************** end of static functions ******************************/
 
 MeServo::MeServo(uint8_t port,uint8_t device):MePort(port)
@@ -911,8 +918,8 @@ int delayTime = abs(value-this->read());
     value = map(value, 0, 180, SERVO_MIN(),  SERVO_MAX());      
   }
   this->writeMicroseconds(value);
-  delay(delayTime);
-  this->detach();
+  //delay(delayTime);
+  //this->detach();
 }
 
 void MeServo::writeMicroseconds(int value)
