@@ -21,8 +21,10 @@
 Class Me_ServoDriver has most of the functions from class Servo, 
 see Me_ServoDriver.h for more details.
 */
-MeServo servoDriver1(1,1);//can ONLY be PORT_1,PORT_2
-MeServo servoDriver2(1,2);
+
+MeServo servoDriver1(PORT_1,DEV1);//can ONLY be PORT_1,PORT_2
+MeServo servoDriver2(PORT_1,DEV2);
+
 int pos1 = 0;
 int pos2 = 180;
 void setup()

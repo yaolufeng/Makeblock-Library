@@ -15,12 +15,14 @@
 #include <Arduino.h>
 #include <SoftwareSerial.h>
 #include <Wire.h>
+
 MeStepperMotor stepperDriver(PORT_1,0x5);
 void initStepper(){
   stepperDriver.begin(STP_SIXTEENTH,10000,10000); // initialize stepper driver.
   stepperDriver.run(); // output pulse
   Serial.println("Stepper Begin");
 }
+
 void setup()
 {
   Serial.begin(9600);

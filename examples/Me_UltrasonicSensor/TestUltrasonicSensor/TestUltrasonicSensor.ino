@@ -17,7 +17,7 @@
 #include <SoftwareSerial.h>
 #include <Wire.h>
 
-MeUltrasonicSensor ultraSensor(7); //Ultrasonic module can ONLY be connected to port 3, 4, 5, 6, 7, 8 of base shield.
+MeUltrasonicSensor ultraSensor(PORT_7); //Ultrasonic module can ONLY be connected to port 3, 4, 5, 6, 7, 8 of base shield.
                                     
 void setup()
 {

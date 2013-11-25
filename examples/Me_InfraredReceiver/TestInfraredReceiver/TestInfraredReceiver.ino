@@ -5,8 +5,7 @@
 * Version            : V1.0.1
 * Date               : 5/18/2013
 * Description        : Example for Makeblock Electronic modules of Me - 
-                       Infrared Receiver. The module can ONLY be connected 
-                       to the port  4 of Me - Base Shield. 
+                       Infrared Receiver. 
 * License            : CC-BY-SA 3.0
 * Copyright (C) 2013 Maker Works Technology Co., Ltd. All right reserved.
 * http://www.makeblock.cc/
@@ -16,12 +15,8 @@
 #include <SoftwareSerial.h>
 #include <Wire.h>
 
-/*
-Note: As the code need to use interrupt 0, it works only when the Me - 
-Infrared Receiver module is connected to the port 4(PORT_4) of Me - 
-Base Shield.
-*/
-MeInfraredReceiver infraredReceiverDecode(6); 
+
+MeInfraredReceiver infraredReceiverDecode(PORT_6); 
 void setup()
 {
     infraredReceiverDecode.begin();

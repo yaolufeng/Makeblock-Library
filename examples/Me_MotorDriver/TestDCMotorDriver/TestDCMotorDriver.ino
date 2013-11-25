@@ -1,12 +1,11 @@
 /*************************************************************************
 * File Name          : TestMotorDriver.ino
 * Author             : Steve
-* Updated            : Steve
+* Updated            : Jasen
 * Version            : V1.0.1
-* Date               : 5/18/2013
+* Date               : 11/14/2013
 * Description        : Test for Makeblock Electronic modules of Me -Motor 
-                       Driver. The module can only be connected to the 
-                       PORT_1, PORT_2 of Me - Base Shield.. 
+                       Driver. You can directly connect a motor to M1 or M2 Port, or connect to PORT_1 or PORT_2 through a DC                        motor driver
 * License            : CC-BY-SA 3.0
 * Copyright (C) 2013 Maker Works Technology Co., Ltd. All right reserved.
 * http://www.makeblock.cc/
@@ -16,8 +15,10 @@
 #include <SoftwareSerial.h>
 #include <Wire.h>
 
-MeDCMotor motorDriver1(1);
-MeDCMotor motorDriver2(2);
+MeDCMotor motor1(PORT_1);
+MeDCMotor motor2(PORT_2);
+MeDCMotor motor2(M1);
+MeDCMotor motor2(M2);
 
 uint8_t motorSpeed = 100;
 
@@ -28,14 +29,20 @@ void setup()
 
 void loop()
 {
-	motorDriver1.run(motorSpeed); // value: between -255 and 255.
-	motorDriver2.run(motorSpeed); // value: between -255 and 255.
+	motor1.run(motorSpeed); // value: between -255 and 255.
+	motor2.run(motorSpeed); // value: between -255 and 255.
+        motor3.run(motorSpeed);
+        motor4.run(motorSpeed);
 	delay(2000);
-	motorDriver1.run(-motorSpeed);
-	motorDriver2.run(-motorSpeed);
+	motor1.run(-motorSpeed);
+	motor2.run(-motorSpeed);
+        motor3.run(-motorSpeed);
+        motor4.run(-motorSpeed);
 	delay(2000);
-	motorDriver1.stop();
-	motorDriver2.stop();
+	motor1.stop();
+	motor2.stop();
+        motor3.stop();
+	motor4.stop();
 	delay(2000);
 }
 
