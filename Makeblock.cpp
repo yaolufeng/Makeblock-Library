@@ -69,36 +69,56 @@ void MeOutput::write2(int value) {
     }
 }
 /*             Wire               */
-MeWire::MeWire(uint8_t port):MePort(port)
+MeWire::MeWire(uint8_t port,uint8_t selector):MePort(port)
 {
+	_slaveAddress = selector+1;
 }
-void MeWire::begin(int slaveAddress)
+void MeWire::begin()
 {
-	_slaveAddress = slaveAddress;
+	delay(1500);
 	Wire.begin();
+	write(BEGIN_FLAG, 0x01);
 }
-byte MeWire::read(byte dataAddress)
+bool MeWire::isRunning(){
+	return read(BEGIN_STATE);
+}
+void MeWire::setSelectorIndex(uint8_t selectorIndex)
 {
-  byte rxByte;
-  Wire.beginTransmission(_slaveAddress); // transmit to device
-  Wire.write(dataAddress); // sends one byte
-  Wire.endTransmission(); // stop transmitting
-  delayMicroseconds(1);
-  Wire.requestFrom(_slaveAddress,1); // request 6 bytes from slave device
-  while(Wire.available()) // slave may send less than requested
-    return rxByte = Wire.read(); // receive a byte as character
-  return 0;
+	write(LS_SET_ST_ADD,selectorIndex);
+}
+byte MeWire::read(byte dataAddress){
+	byte *b={0};
+	b = read(dataAddress,1);
+	return b[0];
+}
+byte* MeWire::read(byte dataAddress,int len)
+{
+	byte rxByte;
+	Wire.beginTransmission(_slaveAddress); // transmit to device
+	Wire.write(dataAddress); // sends one byte
+	Wire.endTransmission(); // stop transmitting
+	delayMicroseconds(1);
+	Wire.requestFrom(_slaveAddress,len); // request 6 bytes from slave device
+	int index =0;
+	byte b[len];
+	while(Wire.available()) // slave may send less than requested
+	{
+		rxByte = Wire.read(); // receive a byte as character
+		b[index] = rxByte;
+		index++;
+	}
+	return b;
 }
 
 void MeWire::write(byte dataAddress, byte data)
 {
-  Wire.beginTransmission(_slaveAddress); // transmit to device
-  Wire.write(dataAddress); // sends one byte
-  Wire.endTransmission(); // stop transmitting
-  
-  Wire.beginTransmission(_slaveAddress); // transmit to device
-  Wire.write(data); // sends one byte
-  Wire.endTransmission(); // stop transmitting
+	Wire.beginTransmission(_slaveAddress); // transmit to device
+	Wire.write(dataAddress); // sends one byte
+	Wire.endTransmission(); // stop transmitting
+	  
+	Wire.beginTransmission(_slaveAddress); // transmit to device
+	Wire.write(data); // sends one byte
+	Wire.endTransmission(); // stop transmitting
 }
 
 
@@ -317,13 +337,13 @@ bool MeInfraredReceiver::buttonState()        // Not available in Switching mode
 }
 /*         LED Strip        */
 // portNum can ONLY be PORT_1 or PORT_2
-MeLedStrip::MeLedStrip(uint8_t port):MeWire(port)
+MeLedStrip::MeLedStrip(uint8_t port,uint8_t selector):MeWire(port,selector)
 {
 
 }
 // initialize ledStrip Driver and set the led quantity. (value: 1-60)
 void MeLedStrip::begin(int ledCount){
-	MeWire::begin(0x05); // join i2c bus (address optional for master)
+	MeWire::begin(); // join i2c bus (address optional for master)
     MeWire::write(LS_LED_COUNT, ledCount);
     reset();
 }
@@ -343,14 +363,6 @@ void MeLedStrip::stopFlash(){
 
 void MeLedStrip::reset(){
 	MeWire::write(LS_RUN_CTRL, LS_RESET);
-}
-
-
-bool MeLedStrip::readState(){
-	if(MeWire::read(LS_RUN_STATE))
-		return true;
-	  else
-		return false;
 }
 
 void MeLedStrip::setPixelColor(byte lsNum, byte lsR,byte lsG, byte lsB, byte lsMode){
@@ -375,17 +387,22 @@ void MeLedStrip::indicators(byte lsNum, byte lsR, byte lsG, byte lsB, byte lsSpd
 	MeWire::write(LS_RUN_CTRL, LS_INDICATORS);
 }
 /*			Stepper		*/
-MeStepperMotor::MeStepperMotor(uint8_t port):MeWire(port)
+MeStepperMotor::MeStepperMotor(uint8_t port,uint8_t selector):MeWire(port,selector)
 {
 }
 
 void MeStepperMotor::begin(byte microStep,long speed,long acceleration)
 {
-    MeWire::begin(0x04); // join i2c bus (address optional for master)
+    MeWire::begin(); // join i2c bus (address optional for master)
+	delay(10);
+	reset();
     setCurrentPosition(0);
 	enable();
+	delay(10);
 	setMicroStep(microStep);
+	delay(10);
 	setMaxSpeed(speed);
+	delay(10);
 	setAcceleration(acceleration);
 }
 
@@ -513,13 +530,6 @@ void MeStepperMotor::wait()
 	MeWire::write(STP_RUN_CTRL, STP_WAIT);
 }
 
-bool MeStepperMotor::readState()
-{
-	if(MeWire::read(STP_RUN_STATE))
-		return true;
-	else
-		return false;
-}
 MeParams::MeParams(){
 	_root = createObject();
 	memset(_root->child,0,sizeof(MeParamObject));
@@ -853,10 +863,6 @@ static void initISR(timer16_Sequence_t timer)
 #endif
 } 
 
-
-
-
-
 /****************** end of static functions ******************************/
 
 MeServo::MeServo(uint8_t port,uint8_t device):MePort(port)
@@ -912,8 +918,8 @@ int delayTime = abs(value-this->read());
     value = map(value, 0, 180, SERVO_MIN(),  SERVO_MAX());      
   }
   this->writeMicroseconds(value);
-  delay(delayTime);
-  this->detach();
+  //delay(delayTime);
+  //this->detach();
 }
 
 void MeServo::writeMicroseconds(int value)

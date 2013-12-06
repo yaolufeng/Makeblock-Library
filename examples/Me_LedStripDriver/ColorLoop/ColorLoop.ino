@@ -16,12 +16,12 @@
 #include <SoftwareSerial.h>
 #include <Wire.h>
 
-MeLedStrip ledStripDriver(PORT_1);
+MeLedStrip ledStripDriver(PORT_1,0x4);
 
 void setup()
 {
   // initialize ledStrip Driver and set the led quantity.
-  ledStripDriver.begin(60);
+  ledStripDriver.begin(30);
   // color loop, auto flash.
   ledStripDriver.color_loop();
 //delay(10000); // run 10s
