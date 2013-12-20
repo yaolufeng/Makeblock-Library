@@ -68,6 +68,7 @@ void MePort::Awrite2(int value)
 }
 
 /*             Wire               */
+
 MeWire::MeWire(uint8_t port, uint8_t selector): MePort(port)
 {
     _slaveAddress = selector + 1;
@@ -123,14 +124,15 @@ void MeWire::write(byte dataAddress, byte data)
 
 
 /*             Serial                  */
-MeSerial::MeSerial(uint8_t port): MePort(port), swSerial(s2, s1)
+MeSerial::MeSerial(uint8_t port):MePort(port),SoftwareSerial(s2,s1)
 {
-    if(port == PORT_5) {
+	if(port == PORT_5) {
         _hard = true;
     } else {
         _hard = false;
     }
 }
+
 void MeSerial::begin(long baudrate)
 {
     if(_hard) {
@@ -138,7 +140,7 @@ void MeSerial::begin(long baudrate)
         Serial1.begin(baudrate);
 		#endif
     } else {
-        swSerial.begin(baudrate);
+        begin(baudrate);
     }
 }
 size_t MeSerial::write(uint8_t byte)
@@ -150,7 +152,7 @@ size_t MeSerial::write(uint8_t byte)
         return Serial1.write(byte);
 		#endif
     	}
-    else return swSerial.write(byte);
+    else return write(byte);
 }
 int MeSerial::read()
 {
@@ -161,7 +163,7 @@ int MeSerial::read()
         return Serial1.read();
 		#endif
     	}
-    else return swSerial.read();
+    else return read();
 }
 int MeSerial::available()
 {
@@ -171,19 +173,19 @@ int MeSerial::available()
         return Serial1.available();
 		#endif
     	}
-    else return swSerial.available();
+    else return available();
 }
 bool MeSerial::listen()
 {
     if(_hard)
         return true;
-    else return swSerial.listen();
+    else return listen();
 }
 bool MeSerial::isListening()
 {
     if(_hard)
         return true;
-    else return swSerial.isListening();
+    else return isListening();
 }
 bool MeSerial::paramAvailable()
 {
@@ -381,7 +383,9 @@ bool MeInfraredReceiver::buttonState()        // Not available in Switching mode
 }
 /*         LED Strip        */
 // portNum can ONLY be PORT_1 or PORT_2
+
 MeLedStrip::MeLedStrip(uint8_t port, uint8_t selector): MeWire(port, selector)
+
 {
 
 }
@@ -407,7 +411,6 @@ void MeLedStrip::stopFlash()
 {
     MeWire::write(LS_RUN_CTRL, LS_STOP_FLASH);
 }
-
 
 void MeLedStrip::reset()
 {
@@ -438,6 +441,7 @@ void MeLedStrip::indicators(byte lsNum, byte lsR, byte lsG, byte lsB, byte lsSpd
     MeWire::write(LS_SET_PIXEL_B, lsB);
     MeWire::write(LS_RUN_CTRL, LS_INDICATORS);
 }
+
 /*          Stepper     */
 
 MeStepperMotor::MeStepperMotor(uint8_t port, uint8_t selector): MeWire(port, selector)
@@ -583,6 +587,7 @@ void MeStepperMotor::wait()
 {
     MeWire::write(STP_RUN_CTRL, STP_WAIT);
 }
+
 //
 MeParams::MeParams()
 {

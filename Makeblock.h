@@ -36,6 +36,7 @@ extern MePort_Sig mePort[11];//mePort[0] is nonsense
 #define DEV2 				2
 
 //states of two linefinder sensors
+
 #define	S1_IN_S2_IN 		0x00 //sensor1 and sensor2 are both inside of black line
 #define	S1_IN_S2_OUT 		0x01 //sensor1 is inside of black line and sensor is outside of black line
 #define	S1_OUT_S2_IN 		0x02 //sensor1 is outside of black line and sensor is inside of black line 
@@ -60,6 +61,7 @@ extern MePort_Sig mePort[11];//mePort[0] is nonsense
 #define LS_SET_SPEED 		0x06
 #define LS_SET_COUNT 		0x07
 #define LS_SET_IN_SPEED 	0x08
+
 
 #define LS_RUN_CTRL 0x1A
 #define LS_LED_COUNT        0x1B
@@ -100,6 +102,7 @@ extern MePort_Sig mePort[11];//mePort[0] is nonsense
 #define STP_CURRENT_POS_RH1 0xA0
 #define STP_CURRENT_POS_RH2 0xA1
 
+
 #define STP_ACC_L1 			0x01 //This is an expensive call since it requires a square root to be calculated. Don't call more ofthen than needed.
 #define STP_ACC_L2 			0x02
 #define STP_ACC_H1 			0x03
@@ -130,6 +133,7 @@ extern MePort_Sig mePort[11];//mePort[0] is nonsense
 #define STP_SLEEP_CTRL 		0x1F
 #define STP_MS_CTRL 		0x20
 #define LS_SET_ST_ADD 		0x21
+
 
 //data table
 #define STP_RUN 			0x01
@@ -280,7 +284,7 @@ protected:
 };
 
 ///@brief class of MeSerial
-class MeSerial: public MePort
+class MeSerial: public SoftwareSerial,public MePort
 {
 public:
     ///@brief initialize
@@ -312,7 +316,6 @@ protected:
     char _cmds[64];
     int _index;
     bool _hard;
-    SoftwareSerial swSerial;
 };
 ///@brief class of MeWire
 class MeWire: public MePort
