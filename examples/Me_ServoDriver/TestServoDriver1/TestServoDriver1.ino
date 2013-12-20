@@ -21,25 +21,25 @@
 Class Me_ServoDriver has most of the functions from class Servo, 
 see Me_ServoDriver.h for more details.
 */
-MeServo servoDriver(1,1);//can ONLY be PORT_1,PORT_2
+
+MeServo servoDriver1(PORT_1,DEV1);//can ONLY be PORT_1,PORT_2
+MeServo servoDriver2(PORT_1,DEV2);
 
 int pos1 = 0;
 int pos2 = 180;
 void setup()
 {
-    servoDriver.begin(0x01, 0x01);
+    servoDriver1.begin();
+    servoDriver2.begin();
 }
 
 void loop()
 {
-    servoDriver.begin();
-    servoDriver.write(pos1);
+    servoDriver1.write(pos1);
+    servoDriver2.write(pos1);
     delay(1000);  // Wait for the servo rotation to the set position
-    servoDriver.write(pos2);
+    servoDriver1.write(pos2);
+    servoDriver2.write(pos2);
     delay(1000);  // Wait for the servo rotation to the set position
-    // Release the servo, not locked position.next.
-    servoDriver.detach();// Next control servo, must call the "begin" function again.
-    delay(1000);
-    
-   
+       
 }
