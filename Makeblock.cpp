@@ -124,7 +124,7 @@ void MeWire::write(byte dataAddress, byte data)
 
 
 /*             Serial                  */
-MeSerial::MeSerial(uint8_t port):MePort(port),SoftwareSerial(s2,s1)
+MeSerial::MeSerial(uint8_t port):MePort(port),SoftwareSerial(mePort[port].s2,mePort[port].s1)
 {
 	if(port == PORT_5) {
         _hard = true;
@@ -140,7 +140,10 @@ void MeSerial::begin(long baudrate)
         Serial1.begin(baudrate);
 		#endif
     } else {
-        begin(baudrate);
+		Serial.print(s1);
+		Serial.print(" , ");
+		Serial.println(s2);
+        SoftwareSerial::begin(baudrate);
     }
 }
 size_t MeSerial::write(uint8_t byte)
@@ -152,7 +155,7 @@ size_t MeSerial::write(uint8_t byte)
         return Serial1.write(byte);
 		#endif
     	}
-    else return write(byte);
+    else return SoftwareSerial::write(byte);
 }
 int MeSerial::read()
 {
@@ -163,7 +166,7 @@ int MeSerial::read()
         return Serial1.read();
 		#endif
     	}
-    else return read();
+    else return SoftwareSerial::read();
 }
 int MeSerial::available()
 {
@@ -173,19 +176,19 @@ int MeSerial::available()
         return Serial1.available();
 		#endif
     	}
-    else return available();
+    else return SoftwareSerial::available();
 }
 bool MeSerial::listen()
 {
     if(_hard)
         return true;
-    else return listen();
+    else return SoftwareSerial::listen();
 }
 bool MeSerial::isListening()
 {
     if(_hard)
         return true;
-    else return isListening();
+    else return SoftwareSerial::isListening();
 }
 bool MeSerial::paramAvailable()
 {
