@@ -382,7 +382,7 @@ void MeInfraredReceiver::begin()
 }
 bool MeInfraredReceiver::buttonState()        // Not available in Switching mode
 {
-    return !(MePort::Dread2());
+    return !(MePort::Dread1());
 }
 /*         LED Strip        */
 // portNum can ONLY be PORT_1 or PORT_2
