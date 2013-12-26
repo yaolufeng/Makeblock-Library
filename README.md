@@ -15,4 +15,4 @@ How to use:
 
 4.For information on installing libraries, see: http://arduino.cc/en/Guide/Libraries
 
-Enter Our Wiki(http://wiki.makeblock.cc) For More Infomation 
+For more infomation on using Makeblock electronic modules, please visit our wiki (http://wiki.makeblock.cc)
