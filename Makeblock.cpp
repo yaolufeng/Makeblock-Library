@@ -3,9 +3,17 @@
 #define MeBaseBoard
 
 
-MePort_Sig mePort[11] = {{NC, NC}, {11, 10}, {3, 9}, {12, 13}, {8, 2},
-    {NC, NC}, {A2, A3}, {NC, A1}, {NC, A0}, {5, 4}, {6, 7}
+#if defined(__AVR_ATmega32U4__) //MeBaseBoard use ATmega32U4 as MCU
+
+MePort_Sig mePort[11] = {{NC, NC}, {11, 8}, {13, 12}, {10, 9}, {1, 0},
+    {MISO, SCK}, {A0, A1}, {A2, A3}, {A4, A5}, {6, 7}, {5, 4}
 };
+#else if defined(__AVR_ATmega328__) // else ATmega328
+MePort_Sig mePort[11] = {{NC, NC}, {11, 10}, {3, 9}, {12, 13}, {8, 2},
+    {NC, NC}, {A2, A3}, {NC, A1}, {NC, A0}, {6, 7}, {5, 4}
+};
+
+#endif
 
 
 /*        Port       */
@@ -13,8 +21,11 @@ MePort::MePort(uint8_t port)
 {
     s1 = mePort[port].s1;
     s2 = mePort[port].s2;
+    _port = port;
 }
-
+uint8_t MePort::getPort(){
+	return _port;
+}
 bool MePort::Dread1()
 {
     bool val;
@@ -122,15 +133,230 @@ void MeWire::write(byte dataAddress, byte data)
     Wire.endTransmission(); // stop transmitting
 }
 
+/*      MeParams       */
+MeParams::MeParams()
+{
+    _root = createObject();
+    memset(_root->child, 0, sizeof(MeParamObject));
+}
+void MeParams::parse(char* s){
+	clear();
+  char *p=NULL;
+  char *v=NULL;
+  p = (char*)malloc(20*sizeof(char));
+  v = (char*)malloc(40*sizeof(char));
+  int i;
+  int len = strlen(s);
+  int pIndex = 0;
+  int vIndex = 0;
+  bool pEnd = false;
+  bool vEnd = true;
+  for(i=0;i<len;i++){
+    if(s[i]=='&'){
+      pEnd = false;
+      vEnd = true;
+      setParam(p,v);
+      memset(p,0,20);
+      memset(v,0,40);
+      pIndex = i+1;
+    }
+    if(s[i]=='='){
+      pEnd=true;
+      vEnd = false;
+      vIndex = i+1;
+    }
+    if(vEnd==false){
+      if(i-vIndex>=0){
+        v[i-vIndex]=s[i];
+      } 
+    }
+    if(pEnd==false){
+      if(i-pIndex>=0){
+       p[i-pIndex]=s[i];
+      }
+    }
+  }
+  setParam(p,v);
+  memset(p,0,20);
+  memset(v,0,40);
+  free(p);
+  free(v);
+}
+MeParamObject *MeParams::getParam(const char *string)
+{
+    MeParamObject *c = _root->child;
+    while (c && strcasecmp(c->name, string))
+        c = c->next;
+    return c;
+}
+void MeParams::setParam(char *name, char *n)
+{
+	bool isStr = true;
+	double v = atof(n);	
+	isStr = v==0;
+	int i=0;
+	int len = strlen(n);
+	for(i=0;i<len;i++){
+		if(i==0){
+			if(n[i]==43||n[i]==45){
+				continue;
+			}
+		}
+		if(n[i]==46){
+			continue;
+		}
+		if(!(n[i]>=48&&n[i]<=57)){
+			isStr = true;	
+			break;
+		}
+	}
+    deleteParam(name);
+    if(isStr) {
+        addItemToObject(name, createCharItem(n));
+    } else {
+        addItemToObject(name, createItem(v));
+    }
+}
+double MeParams::getParamValue(const char *string)
+{
+    return getParam(string)->value;
+}
+char *MeParams::getParamCode(const char *string)
+{
+    return getParam(string)->code;
+}
+void MeParams::clear()
+{
+    unsigned char i = 0;
+    MeParamObject *c = _root->child;
+    MeParamObject *prev;
+    while (c){
+		prev = c;
+    	c = c->next;
+    }
+    c = prev;
+    while(prev){
+    	c = prev->prev;
+		deleteParam(prev->name);
+    	prev = c;
+    }
+
+}
+void MeParams::deleteParam(char *string)
+{	
+    deleteItemFromRoot(detachItemFromObject(string));
+}
+MeParamObject *MeParams::createObject()
+{
+    MeParamObject *item = (MeParamObject *) malloc(sizeof(MeParamObject));
+    if (item) {
+        memset(item, 0, sizeof(MeParamObject));
+    }
+    return item;
+}
+MeParamObject *MeParams::createItem(double n)
+{
+    MeParamObject *item = (MeParamObject *) malloc(sizeof(MeParamObject));
+    if (item) {
+        memset(item, 0, sizeof(MeParamObject));
+        item->value = n;
+        item->type = 1;
+    }
+    return item;
+}
+MeParamObject *MeParams::createCharItem(char *n)
+{
+    MeParamObject *item = (MeParamObject *) malloc(sizeof(MeParamObject));
+    if (item) {
+        memset(item, 0, sizeof(MeParamObject));
+        item->code = strdup(n);
+        item->type = 2;
+    }
+    return item;
+}
+
+void MeParams::addItemToObject(char *string, MeParamObject *item)
+{
+    if (!item)
+        return;
+    if (item->name){
+    	free(item->name);
+    }
+        
+    item->name = strdup(string);
+    MeParamObject *c = _root->child;
+    if (!item)
+        return;
+
+    if (!c) {
+        _root->child = item;
+    } else {
+        while (c && c->next)
+            c = c->next;
+        suffixObject(c, item);
+    }
+}
+void MeParams::deleteItemFromRoot(MeParamObject *c)
+{
+    MeParamObject *next;
+    while (c) {
+        next = c->next;
+        if (c->name) {
+            free(c->name);
+        }
+        if (c->child) {
+            deleteItemFromRoot(c->child);
+        }
+        if(c->code&&c->type==2){
+			free(c->code);
+		}
+		c->type=0;
+        free(c);
+        c = next;
+    }
+}
+MeParamObject *MeParams::detachItemFromObject( char *string)
+{
+    unsigned char i = 0;
+    MeParamObject *c = _root->child;
+    while (c && strcasecmp(c->name, string))
+        i++, c = c->next;
+    if (c)
+        return detachItemFromArray(i);
+    return 0;
+}
+void MeParams::deleteItemFromArray(unsigned char which)
+{
+    deleteItemFromRoot(detachItemFromArray(which));
+}
+MeParamObject *MeParams::detachItemFromArray(unsigned char which)
+{
+    MeParamObject *c = _root->child;
+    while (c && which > 0)
+        c = c->next, which--;
+    if (!c)
+        return 0;
+
+    if (c->prev)
+        c->prev->next = c->next;
+    if (c->next)
+        c->next->prev = c->prev;
+    if (c == _root->child)
+        _root->child = c->next;
+    c->prev = c->next = 0;
+    return c;
+}
+
+void MeParams::suffixObject(MeParamObject *prev, MeParamObject *item)
+{
+    prev->next = item;
+    item->prev = prev;
+}
 
 /*             Serial                  */
 MeSerial::MeSerial(uint8_t port):MePort(port),SoftwareSerial(mePort[port].s2,mePort[port].s1)
 {
-	if(port == PORT_5) {
-        _hard = true;
-    } else {
-        _hard = false;
-    }
+    _hard = getPort()==PORT_5;
 }
 
 void MeSerial::begin(long baudrate)
@@ -138,11 +364,10 @@ void MeSerial::begin(long baudrate)
     if(_hard) {
 		#if defined(__AVR_ATmega32U4__)
         Serial1.begin(baudrate);
+        #else
+        Serial.begin(baudrate);
 		#endif
     } else {
-		Serial.print(s1);
-		Serial.print(" , ");
-		Serial.println(s2);
         SoftwareSerial::begin(baudrate);
     }
 }
@@ -153,6 +378,8 @@ size_t MeSerial::write(uint8_t byte)
     	{
     	#if defined(__AVR_ATmega32U4__)
         return Serial1.write(byte);
+        #else
+        Serial.write(byte);
 		#endif
     	}
     else return SoftwareSerial::write(byte);
@@ -163,7 +390,9 @@ int MeSerial::read()
     if(_hard)
     	{
 		#if defined(__AVR_ATmega32U4__)
-        return Serial1.read();
+        	return Serial1.read();
+        #else
+        	return Serial.read();
 		#endif
     	}
     else return SoftwareSerial::read();
@@ -173,7 +402,9 @@ int MeSerial::available()
     if(_hard)
     	{
     	#if defined(__AVR_ATmega32U4__)
-        return Serial1.available();
+        	return Serial1.available();
+        #else
+        	return Serial.available();
 		#endif
     	}
     else return SoftwareSerial::available();
@@ -193,23 +424,26 @@ bool MeSerial::isListening()
 bool MeSerial::paramAvailable()
 {
     char c = this->read();
-    if(c > -1) {
-        if(c == '\n') {
-            _params.clear();
+    bool isParse = (millis()-_lastTime)>100&&_index>0;
+    if(c > -1||isParse) {
+        if(c == '\n'||isParse) {
             char str[_index];
             _cmds[_index] = '\0';
             strcpy(str, _cmds);
-            findParamName(str, _index + 1);
+            _params.parse(str);
             _index = 0;
             return true;
         } else {
             _cmds[_index] = c;
             _index++;
         }
+        
+    	_lastTime = millis();
     }
     return false;
 }
-int MeSerial::getParamValue(char *str)
+
+double MeSerial::getParamValue(char *str)
 {
     return _params.getParamValue(str);
 }
@@ -382,7 +616,7 @@ void MeInfraredReceiver::begin()
 }
 bool MeInfraredReceiver::buttonState()        // Not available in Switching mode
 {
-    return !(MePort::Dread1());
+    return !(MePort::Dread2());
 }
 /*         LED Strip        */
 // portNum can ONLY be PORT_1 or PORT_2
@@ -589,146 +823,6 @@ void MeStepperMotor::stop()
 void MeStepperMotor::wait()
 {
     MeWire::write(STP_RUN_CTRL, STP_WAIT);
-}
-
-//
-MeParams::MeParams()
-{
-    _root = createObject();
-    memset(_root->child, 0, sizeof(MeParamObject));
-}
-
-MeParamObject *MeParams::getParam(const char *string)
-{
-    MeParamObject *c = _root->child;
-    while (c && strcasecmp(c->name, string))
-        c = c->next;
-    return c;
-}
-void MeParams::setParam(const char *name, char *n)
-{
-    double v = strtod(n, NULL);
-    deleteParam(name);
-    if(v == NULL) {
-        addItemToObject(name, createCharItem(n));
-    } else {
-        addItemToObject(name, createItem(v));
-    }
-}
-double MeParams::getParamValue(const char *string)
-{
-    return getParam(string)->value;
-}
-char *MeParams::getParamCode(const char *string)
-{
-    return getParam(string)->code;
-}
-void MeParams::clear()
-{
-    unsigned char i = 0;
-    MeParamObject *c = _root->child;
-    while (c)
-        i++, c = c->next, deleteParam(c->name);
-
-}
-void MeParams::deleteParam(const char *string)
-{
-    deleteItemFromRoot(detachItemFromObject(string));
-}
-MeParamObject *MeParams::createObject()
-{
-    MeParamObject *item = (MeParamObject *) malloc(sizeof(MeParamObject));
-    if (item) {
-        memset(item, 0, sizeof(MeParamObject));
-    }
-    return item;
-}
-MeParamObject *MeParams::createItem(double n)
-{
-    MeParamObject *item = (MeParamObject *) malloc(sizeof(MeParamObject));
-    if (item) {
-        memset(item, 0, sizeof(MeParamObject));
-        item->value = n;
-    }
-    return item;
-}
-MeParamObject *MeParams::createCharItem(char *n)
-{
-    MeParamObject *item = (MeParamObject *) malloc(sizeof(MeParamObject));
-    if (item) {
-        memset(item, 0, sizeof(MeParamObject));
-        item->code = n;
-    }
-    return item;
-}
-
-void MeParams::addItemToObject(const char *string, MeParamObject *item)
-{
-    if (!item)
-        return;
-    if (item->name)
-        free(item->name);
-    item->name = strdup(string);
-    MeParamObject *c = _root->child;
-    if (!item)
-        return;
-
-    if (!c) {
-        _root->child = item;
-    } else {
-        while (c && c->next)
-            c = c->next;
-        suffixObject(c, item);
-    }
-}
-void MeParams::deleteItemFromRoot(MeParamObject *c)
-{
-    MeParamObject *next;
-    while (c) {
-        next = c->next;
-        if (c->name) {
-            free(c->name);
-        }
-        free(c);
-        c = next;
-    }
-}
-MeParamObject *MeParams::detachItemFromObject( const char *string)
-{
-    unsigned char i = 0;
-    MeParamObject *c = _root->child;
-    while (c && strcasecmp(c->name, string))
-        i++, c = c->next;
-    if (c)
-        return detachItemFromArray(i);
-    return 0;
-}
-void MeParams::deleteItemFromArray(unsigned char which)
-{
-    deleteItemFromRoot(detachItemFromArray(which));
-}
-MeParamObject *MeParams::detachItemFromArray(unsigned char which)
-{
-    MeParamObject *c = _root->child;
-    while (c && which > 0)
-        c = c->next, which--;
-    if (!c)
-        return 0;
-
-    if (c->prev)
-        c->prev->next = c->next;
-    if (c->next)
-        c->next->prev = c->prev;
-    if (c == _root->child)
-        _root->child = c->next;
-    c->prev = c->next = 0;
-    return c;
-}
-
-void MeParams::suffixObject(MeParamObject *prev, MeParamObject *item)
-{
-    prev->next = item;
-    item->prev = prev;
 }
 
 /*servo*/
@@ -1035,96 +1129,79 @@ Me4Button::Me4Button(uint8_t port) : MePort(port)
 {
     _toggleState = NULL_KEY;
     _oldState = NULL_KEY_VALUE;
+	_prevPressedState = 0;
     _pressedState = NULL_KEY;
     _releasedState = NULL_KEY;
     _heldState = NULL_KEY;
-    _heldTime = 1000;
+    _heldTime = millis();
 }
 
-void Me4Button::update()
+bool Me4Button::update()
 {
+	if(millis()-_heldTime<10){
+		return false;
+	}
     uint8_t update_temp;
     uint16_t newState = 0;
-    for(uint8_t i = 0; i < 4; i++) {
-        newState +=  MePort::Aread2();
+	uint16_t t=0;
+	uint16_t tmax = 0;
+    for(uint8_t i = 0; i < 16; i++) {
+		t = MePort::Aread2();
+		if(i<4){
+			continue;
+		}
+        newState += t;
+		if(tmax<t){
+			tmax = t;
+		}
     }
-    newState >>= 2;
-    if(newState < 1000 && _oldState > 1000)update_temp = 1;
-    else if(newState > 1000 && _oldState < 1000)update_temp = 1;
-    else {
-        if ( newState < 10) {
-            if(newState > _oldState + 5)update_temp = 1;
-            else update_temp = 0;
-        } else if( newState > 1000) {
-            if(newState < _oldState - 5)update_temp = 1;
-            else update_temp = 0;
-        } else {
-            if(newState < _oldState - 5 || newState > _oldState + 5)update_temp = 1;
-            else update_temp = 0;
-        }
-    }
-    if ( update_temp) {
-        if(newState >= KEY1_VALUE && newState < KEY1_VALUE + 10)_pressedState = KEY1;
-        else if(newState > KEY2_VALUE - 10 && newState < KEY2_VALUE + 10)_pressedState = KEY2;
-        else if(newState > KEY3_VALUE - 10 && newState < KEY3_VALUE + 10)_pressedState = KEY3;
-        else if(newState > KEY4_VALUE - 10 && newState < KEY4_VALUE + 10)_pressedState = KEY4;
-        if(newState > 1000) { //released?
-            _toggleState = !_toggleState;
-            if(_oldState >= KEY1_VALUE && _oldState < KEY1_VALUE + 10)_releasedState = KEY1;
-            else if(_oldState > KEY2_VALUE - 10 && _oldState < KEY2_VALUE + 10)_releasedState = KEY2;
-            else if(_oldState > KEY3_VALUE - 10 && _oldState < KEY3_VALUE + 10)_releasedState = KEY3;
-            else if(_oldState > KEY4_VALUE - 10 && _oldState < KEY4_VALUE + 10)_releasedState = KEY4;
-        }
-        delay(10); // debouncing
+	newState -=tmax;
+    newState /= 11;
+    if(abs(newState-_oldState) > 40)update_temp = 1;
+	else update_temp = 0;	
+    if (update_temp) {
+		if(newState > KEY4_VALUE+50) { //released?
+	            _toggleState = !_toggleState;
+	            if(_oldState < KEY1_VALUE+5)_releasedState = KEY1;
+	            else if(_oldState > KEY2_VALUE - 5 && _oldState < KEY2_VALUE + 5)_releasedState = KEY2;
+	            else if(_oldState > KEY3_VALUE - 5 && _oldState < KEY3_VALUE + 5)_releasedState = KEY3;
+	            else if(_oldState > KEY4_VALUE - 5 && _oldState < KEY4_VALUE + 5)_releasedState = KEY4;
+				
+
+				_pressedState = NULL_KEY;
+	    }else{
+	        if(newState < KEY1_VALUE+5)_pressedState = KEY1;
+	        else if((newState > KEY2_VALUE - 5) && (newState < KEY2_VALUE + 5))_pressedState = KEY2;
+	        else if((newState > KEY3_VALUE - 5) && (newState < KEY3_VALUE + 5))_pressedState = KEY3;
+	        else if((newState > KEY4_VALUE - 5) && (newState < KEY4_VALUE + 5))_pressedState = KEY4;	
+		}
+        //delay(10); // debouncing
     } else {
-        int timeDiff = millis() - _millisMark;
-        if(newState < 1000 && _oldState < 1000 && timeDiff > _heldTime) { //held
-            if(newState >= KEY1_VALUE && newState < KEY1_VALUE + 10)_heldState = KEY1;
-            else if(newState > KEY2_VALUE - 10 && newState < KEY2_VALUE + 10)_heldState = KEY2;
-            else if(newState > KEY3_VALUE - 10 && newState < KEY3_VALUE + 10)_heldState = KEY3;
-            else if(newState > KEY4_VALUE - 10 && newState < KEY4_VALUE + 10)_heldState = KEY4;
-        } else {
-            _heldState = NULL_KEY;
-        }
-
-
+       	if(_oldState < (KEY4_VALUE + 10))_pressedState = NULL_KEY;
+		if(newState > KEY4_VALUE+5 && _oldState > KEY4_VALUE+5){
+			_releasedState = NULL_KEY;
+		}
     }
     _oldState = newState;
+	_heldTime = millis();
+	return true;
 }
 
 
 uint8_t Me4Button::pressed()
 {
-    uint8_t returnValue;
-    update();
-
-    if(_pressedState) {
-        _millisMark = millis();
-        returnValue = _pressedState;
-    } else
-        returnValue = NULL_KEY;
-    _pressedState = NULL_KEY;
-    return returnValue;
+	update();
+	uint8_t returnKey = _pressedState;
+	_pressedState = NULL_KEY;
+	return returnKey;
 }
 
 uint8_t Me4Button::released()
 {
-    uint8_t returnValue;
-    update();
-
-    if(_releasedState) {
-        returnValue = _releasedState;
-    } else
-        returnValue = NULL_KEY;
-    _releasedState = NULL_KEY;
-
-    return returnValue;
-}
-
-uint8_t Me4Button::held()
-{
-    update();
-    return _heldState;
+	update();
+	uint8_t returnKey = _releasedState;
+	_releasedState = NULL_KEY;
+	return returnKey;
 }
 
 /*      Joystick        */
@@ -1133,13 +1210,26 @@ MeJoystick::MeJoystick(uint8_t port) : MePort(port){}
 
 int MeJoystick::readX()
 {	
-	return MePort::Aread1();
+	int mapX = map(MePort::Aread1(),1,968,-255,255);
+	return abs(mapX)<15?0:mapX ;
 }
 
 int MeJoystick::readY()
 {
     
-    return MePort::Aread2();
+    int mapY = map(MePort::Aread2(),24,973,-255,255);
+	return abs(mapY)<15?0:mapY ;
+}
+
+float MeJoystick::angle(){
+	return atan2(readY(),readX())*180.0/PI;
+}
+
+float MeJoystick::strength(){
+	long dx = abs(readX());
+	long dy = abs(readY());
+	long dist = dx*dx+dy*dy;
+	return min(1.0,sqrt(dist)/255.0);
 }
 
 /*      Light Sensor        */
@@ -1150,10 +1240,10 @@ bool MeLightSensor::Dread()
 	return MePort::Dread1();
 }
 
-int MeLightSensor::Aread()
+float MeLightSensor::strength()
 {
     
-    return MePort::Aread2();
+    return map(MePort::Aread1(),0,1023,0,1023);
 }
 
 /*      Sound Sensor        */
@@ -1169,5 +1259,4 @@ int MeSoundSensor::Aread()
     
     return MePort::Aread2();
 }
-
 

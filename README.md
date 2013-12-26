@@ -1,4 +1,4 @@
-Makeblock_Lib
+Makeblock Library
 =============
 
 Library for Makeblock electronic modules

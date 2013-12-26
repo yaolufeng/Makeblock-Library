@@ -185,58 +185,13 @@ extern MePort_Sig mePort[11];//mePort[0] is nonsense
 
 #define NULL_KEY_VALUE  	1023
 #define KEY1_VALUE  		0
-#define KEY2_VALUE  		1024/2
-#define KEY3_VALUE  		1024/3*2
-#define KEY4_VALUE  		1024/4*3
+#define KEY2_VALUE  		485//1024/2
+#define KEY3_VALUE  		648//1024/3*2
+#define KEY4_VALUE  		729//1024/4*3
 
 
 static bool _isServoBusy = false;
-///@brief Struct of MeParamObject
-typedef struct MeParamObject
-{
-    char *name;
-    struct MeParamObject *next, *prev;
-    struct MeParamObject *child;
-    union
-    {
-        char *code;
-        double value;
-    };
-} MeParamObject;
 
-///@brief class of MeParams
-class MeParams
-{
-public:
-    ///@brief initialize
-    MeParams();
-    ///@brief get the param object with name.
-    ///@param string param name
-    ///@return MeParamObject.
-    MeParamObject *getParam(const char *string);
-    ///@brief get double value of the param with name.
-    ///@param string param name.
-    ///@return double value.
-    double getParamValue(const char *string);
-    ///@brief get string value of the param with name.
-    ///@param string param name
-    ///@return string value.
-    char *getParamCode(const char *string);
-    void setParam(const char *name, char *n);
-    void clear();
-protected:
-    MeParamObject *_root;
-    void suffixObject(MeParamObject *prev, MeParamObject *item);
-    void addItemToObject(const char *string, MeParamObject *item);
-    void deleteParam(const char *string);
-    void deleteItemFromRoot(MeParamObject *c);
-    MeParamObject *detachItemFromObject( const char *string);
-    void deleteItemFromArray(unsigned char which);
-    MeParamObject *detachItemFromArray(unsigned char which);
-    MeParamObject *createObject();
-    MeParamObject *createItem(double n);
-    MeParamObject *createCharItem(char *n);
-};
 ///@brief class of MePort,it contains two pin.
 class MePort
 {
@@ -247,11 +202,7 @@ public:
     ///@return the level of pin 1 of port
     ///@retval true on HIGH.
     ///@retval false on LOW.
-    /*   bool read1();
-       ///@return the level of pin 2 of port
-       ///@retval true on HIGH.
-       ///@retval false on LOW.
-       bool read2();*/
+    uint8_t getPort();
 
     ///@return the level of pin 1 of port
     ///@retval true on HIGH.
@@ -281,8 +232,62 @@ public:
 protected:
     uint8_t s1;
     uint8_t s2;
+    uint8_t _port;
 };
+///@brief Struct of MeParamObject
+typedef struct MeParamObject
+{
+    char *name;
+    int type;
+    struct MeParamObject *next, *prev;
+    struct MeParamObject *child;
+    union
+    {
+        char *code;
+        double value;
+    };
+} MeParamObject;
 
+///@brief class of MeParams
+class MeParams
+{
+public:
+    ///@brief initialize
+    MeParams();
+    ///@brief get the param object with name.
+    ///@param string param name
+    ///@return MeParamObject.
+    MeParamObject *getParam(const char *string);
+    ///@brief get double value of the param with name.
+    ///@param string param name.
+    ///@return double value.
+    double getParamValue(const char *string);
+    ///@brief get string value of the param with name.
+    ///@param string param name
+    ///@return string value.
+    char *getParamCode(const char *string);
+    ///@brief set string/double value of the param with name.
+    ///@param string param name
+	///@param string string value
+    void setParam(char *name, char *n);
+    ///@brief parse the format string to object.
+    ///@param string the format string,like "a=12.45&b=hello"
+    void parse(char* s);
+    ///@brief remove all from object.
+    void clear();
+protected:
+    MeParamObject *_root;
+    void suffixObject(MeParamObject *prev, MeParamObject *item);
+    void addItemToObject( char *string, MeParamObject *item);
+    void deleteParam( char *string);
+    void deleteItemFromRoot(MeParamObject *c);
+    MeParamObject *detachItemFromObject(  char *string);
+    void deleteItemFromArray(unsigned char which);
+    MeParamObject *detachItemFromArray(unsigned char which);
+    MeParamObject *createObject();
+    MeParamObject *createItem(double n);
+    MeParamObject *createCharItem(char *n);
+};
 ///@brief class of MeSerial
 class MeSerial: public SoftwareSerial,public MePort
 {
@@ -305,7 +310,7 @@ public:
     ///@brief Get the param object with the param available
     ///@return MeParams, the param string example:"motor_speed=100&servo_angle=45.4"
     MeParams getParams();
-    int getParamValue(char *str);
+    double getParamValue(char *str);
     char *getParamCode(char *str);
     bool listen();
     bool isListening();
@@ -316,6 +321,7 @@ protected:
     char _cmds[64];
     int _index;
     bool _hard;
+    long _lastTime;
 };
 ///@brief class of MeWire
 class MeWire: public MePort
@@ -621,17 +627,16 @@ class Me4Button: public MePort
 public:
     Me4Button(uint8_t port);
     uint8_t pressed();
-    uint8_t held();
     uint8_t released();
 
 protected:
     uint16_t _toggleState, _oldState;
-    uint8_t _pressedState, _releasedState;
+    uint8_t _pressedState,_prevPressedState, _releasedState;
     uint8_t _heldState;
+    bool update();
     int _heldTime;
     int _millisMark;
 
-    void update();
 };
 
 /*      Joystick        */
@@ -642,6 +647,8 @@ public:
     MeJoystick(uint8_t port);
     int readX();
     int readY();
+	float angle();
+	float strength();
 };
 /*      Light Sensor         */
 
@@ -650,7 +657,7 @@ class MeLightSensor : public MePort
 public:
     MeLightSensor(uint8_t port);
     bool Dread();
-    int Aread();
+    float strength();
 };
 
 /*      Light Sensor         */
@@ -662,5 +669,6 @@ public:
     bool Dread();
     int Aread();
 };
+
 
 #endif
