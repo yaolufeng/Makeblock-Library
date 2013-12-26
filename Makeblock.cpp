@@ -522,7 +522,7 @@ MeLimitSwitch::MeLimitSwitch(uint8_t port): MePort(port)
 }
 bool MeLimitSwitch::touched()                                                                                                                                                          
 {
-    return MePort::Dread2();
+    return MePort::Dread1();
 }
 
 /*             MotorDriver              */
