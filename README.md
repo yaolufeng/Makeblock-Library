@@ -12,14 +12,18 @@ How to use:
 Your Arduino library folder should now look like this (on Windows):
 
   My Documents\Arduino\libraries\Makeblock\Makeblock.cpp
+  
   My Documents\Arduino\libraries\Makeblock\Makeblock.h
+  
   My Documents\Arduino\libraries\Makeblock\examples
   ....
 
 or like this (on Mac):
 
   Documents/Arduino/libraries/Makeblock/Makeblock.cpp
+  
   Documents/Arduino/libraries/Makeblock/Makeblock.h
+  
   Documents/Arduino/libraries/Makeblock/examples
   ...
 
