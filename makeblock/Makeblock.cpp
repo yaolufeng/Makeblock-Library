@@ -545,7 +545,7 @@ void MeDCMotor::run(int speed)
 }
 void MeDCMotor::stop()
 {
-    MePort::Awrite2(0);
+    MeDCMotor::run(0);
 }
 /*           UltrasonicSenser                 */
 MeUltrasonicSensor::MeUltrasonicSensor(uint8_t port): MePort(port)
