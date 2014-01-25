@@ -309,6 +309,7 @@ public:
     bool paramAvailable();
     ///@brief Get the param object with the param available
     ///@return MeParams, the param string example:"motor_speed=100&servo_angle=45.4"
+    int poll();
     MeParams getParams();
     double getParamValue(char *str);
     char *getParamCode(char *str);
@@ -321,6 +322,9 @@ protected:
     char _cmds[64];
     int _index;
     bool _hard;
+    bool _polling;
+    int _bitPeriod;
+    int _byte;
     long _lastTime;
 };
 ///@brief class of MeWire

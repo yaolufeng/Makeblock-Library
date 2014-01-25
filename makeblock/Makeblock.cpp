@@ -5,7 +5,7 @@
 
 #if defined(__AVR_ATmega32U4__) //MeBaseBoard use ATmega32U4 as MCU
 
-MePort_Sig mePort[11] = {{NC, NC}, {11, 8}, {13, 12}, {10, 9}, {1, 0},
+MePort_Sig mePort[11] = {{NC, NC}, {11, A8}, {13, A11}, {10, A9}, {1, 0},
     {MISO, SCK}, {A0, A1}, {A2, A3}, {A4, A5}, {6, 7}, {5, 4}
 };
 #else if defined(__AVR_ATmega328__) // else ATmega328
@@ -356,16 +356,22 @@ void MeParams::suffixObject(MeParamObject *prev, MeParamObject *item)
 /*             Serial                  */
 MeSerial::MeSerial(uint8_t port):MePort(port),SoftwareSerial(mePort[port].s2,mePort[port].s1)
 {
-    _hard = getPort()==PORT_5;
+    _hard = false;
+    _polling = false;
+    #if defined(__AVR_ATmega32U4__)
+        _polling = getPort()>PORT_4;
+        _hard = getPort()==PORT_4;
+    #endif
 }
 
 void MeSerial::begin(long baudrate)
 {
+    _bitPeriod = 1000000/baudrate;
     if(_hard) {
 		#if defined(__AVR_ATmega32U4__)
-        Serial1.begin(baudrate);
+            Serial1.begin(baudrate);
         #else
-        Serial.begin(baudrate);
+            Serial.begin(baudrate);
 		#endif
     } else {
         SoftwareSerial::begin(baudrate);
@@ -374,40 +380,44 @@ void MeSerial::begin(long baudrate)
 size_t MeSerial::write(uint8_t byte)
 {
     if(_isServoBusy == true)return -1;
-    if(_hard)
-    	{
+    if(_hard){
     	#if defined(__AVR_ATmega32U4__)
-        return Serial1.write(byte);
+            return Serial1.write(byte);
         #else
-        Serial.write(byte);
+            Serial.write(byte);
 		#endif
-    	}
-    else return SoftwareSerial::write(byte);
+    }else return SoftwareSerial::write(byte);
 }
 int MeSerial::read()
 {
     if(_isServoBusy == true)return -1;
-    if(_hard)
-    	{
+    
+    if(_polling){
+        int temp = _byte;
+        _byte = -1;
+        return temp>-1?temp:poll();
+    }
+    if(_hard){
 		#if defined(__AVR_ATmega32U4__)
         	return Serial1.read();
         #else
         	return Serial.read();
 		#endif
-    	}
-    else return SoftwareSerial::read();
+    }else return SoftwareSerial::read();
 }
 int MeSerial::available()
 {
-    if(_hard)
-    	{
+    if(_polling){
+        _byte = poll();
+        return _byte>-1?1:0;
+    }
+    if(_hard){
     	#if defined(__AVR_ATmega32U4__)
         	return Serial1.available();
         #else
         	return Serial.available();
 		#endif
-    	}
-    else return SoftwareSerial::available();
+    }else return SoftwareSerial::available();
 }
 bool MeSerial::listen()
 {
@@ -420,6 +430,20 @@ bool MeSerial::isListening()
     if(_hard)
         return true;
     else return SoftwareSerial::isListening();
+}
+int MeSerial::poll()
+{
+    int val = 0;
+    int bitDelay = _bitPeriod - clockCyclesToMicroseconds(50);
+    if (digitalRead(s2) == LOW) {
+        for (int offset = 0; offset < 8; offset++) {
+            delayMicroseconds(bitDelay);
+            val |= digitalRead(s2) << offset;
+        }
+        delayMicroseconds(bitDelay);
+        return val&0xff;
+    }
+    return -1;
 }
 bool MeSerial::paramAvailable()
 {
