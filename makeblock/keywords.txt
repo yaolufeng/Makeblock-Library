@@ -100,3 +100,5 @@ Aread KEYWORD2
 # Constants (LITERAL1)
 #######################################
 
+DEV1 LITERAL1
+DEV2 LITERAL1

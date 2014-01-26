@@ -368,9 +368,12 @@ public:
 class MeLimitSwitch: public MePort
 {
 public:
-    MeLimitSwitch(uint8_t port);
+    MeLimitSwitch(uint8_t port,uint8_t device);
     bool touched();
+private:
+    uint8_t _device;
 };
+
 ///@brief Class for Ultrasonic Sensor Module
 class MeUltrasonicSensor: public MePort
 {

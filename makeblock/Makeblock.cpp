@@ -541,12 +541,18 @@ int MeLineFinder::readSensor2()
     return MePort::Dread2();
 }
 /*             LimitSwitch              */
-MeLimitSwitch::MeLimitSwitch(uint8_t port): MePort(port)
+MeLimitSwitch::MeLimitSwitch(uint8_t port,uint8_t device): MePort(port)
 {
+    _device = device;
+    if(_device==DEV2){
+        pinMode(s1,INPUT_PULLUP);
+    }else{
+        pinMode(s2,INPUT_PULLUP);
+    }
 }
 bool MeLimitSwitch::touched()                                                                                                                                                          
 {
-    return MePort::Dread1();
+    return _device==DEV2?digitalRead(s1):digitalRead(s2);
 }
 
 /*             MotorDriver              */
