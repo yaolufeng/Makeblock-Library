@@ -35,6 +35,11 @@ extern MePort_Sig mePort[11];//mePort[0] is nonsense
 #define DEV1 				1
 #define DEV2 				2
 
+// buzzer 
+#define buzzerOn()  DDRE |= 0x04,PORTE |= B00000100
+#define buzzerOff() DDRE |= 0x04,PORTE &= B11111011
+
+
 //states of two linefinder sensors
 
 #define	S1_IN_S2_IN 		0x00 //sensor1 and sensor2 are both inside of black line
@@ -368,7 +373,6 @@ public:
 class MeLimitSwitch: public MePort
 {
 public:
-	MeLimitSwitch(uint8_t port);
     MeLimitSwitch(uint8_t port,uint8_t device);
     bool touched();
 private:
@@ -664,7 +668,9 @@ class MeLightSensor : public MePort
 {
 public:
     MeLightSensor(uint8_t port);
-    bool Dread();
+    int read();
+	void lightOn();
+	void lightOff();
     float strength();
 };
 
