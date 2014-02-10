@@ -359,6 +359,7 @@ protected:
 class MeLineFinder: public MePort
 {
 public:
+	MeLineFinder();
     ///@brief initialize
     MeLineFinder(uint8_t port);
     ///@brief state of all sensors
@@ -373,6 +374,8 @@ public:
 class MeLimitSwitch: public MePort
 {
 public:
+	MeLimitSwitch();
+	MeLimitSwitch(uint8_t port);
     MeLimitSwitch(uint8_t port,uint8_t device);
     bool touched();
 private:
@@ -383,6 +386,7 @@ private:
 class MeUltrasonicSensor: public MePort
 {
 public :
+	MeUltrasonicSensor();
     MeUltrasonicSensor(uint8_t port);
     long distanceCm();
     long distanceInch();
@@ -392,6 +396,7 @@ public :
 class MeDCMotor: public MePort
 {
 public:
+	MeDCMotor();
     MeDCMotor(uint8_t port);
     void run(int speed);
     void stop();
@@ -400,6 +405,7 @@ public:
 class MeShutter: public MePort
 {
 public:
+	MeShutter();
     MeShutter(uint8_t port);
     void shotOn();
     void shotOff();
@@ -410,12 +416,14 @@ public:
 class MeBluetooth: public MeSerial
 {
 public:
+	MeBluetooth();
     MeBluetooth(uint8_t port);
 };
 ///@brief Class for Infrared Receiver Module
 class MeInfraredReceiver: public MeSerial
 {
 public:
+	MeInfraredReceiver();
     MeInfraredReceiver(uint8_t port);
     void begin();
     ///@brief check press state of button
@@ -604,6 +612,7 @@ typedef struct
 class MeServo: public MePort
 {
 public:
+	MeServo();
     MeServo(uint8_t port, uint8_t device);
     ///@brief attach the given pin to the next free channel, sets pinMode, returns channel number or 0 if failure
     uint8_t begin();
@@ -637,6 +646,7 @@ private:
 class Me4Button: public MePort
 {
 public:
+	Me4Button();
     Me4Button(uint8_t port);
     uint8_t pressed();
     uint8_t released();
@@ -656,6 +666,7 @@ protected:
 class MeJoystick : public MePort
 {
 public:
+	MeJoystick();
     MeJoystick(uint8_t port);
     int readX();
     int readY();
@@ -667,6 +678,7 @@ public:
 class MeLightSensor : public MePort
 {
 public:
+	MeLightSensor();
     MeLightSensor(uint8_t port);
     int read();
 	void lightOn();
@@ -679,6 +691,7 @@ public:
 class MeSoundSensor : public MePort
 {
 public:
+	MeSoundSensor();
     MeSoundSensor(uint8_t port);
     bool Dread();
     int Aread();

@@ -8,7 +8,7 @@
 MePort_Sig mePort[11] = {{NC, NC}, {11, A8}, {13, A11}, {A10, A9}, {1, 0},
     {MISO, SCK}, {A0, A1}, {A2, A3}, {A4, A5}, {6, 7}, {5, 4}
 };
-#else if defined(__AVR_ATmega328__) // else ATmega328
+#else // else ATmega328
 MePort_Sig mePort[11] = {{NC, NC}, {11, 10}, {3, 9}, {12, 13}, {8, 2},
     {NC, NC}, {A2, A3}, {NC, A1}, {NC, A0}, {6, 7}, {5, 4}
 };
@@ -382,6 +382,8 @@ MeSerial::MeSerial(uint8_t port):MePort(port),SoftwareSerial(mePort[port].s2,meP
     #if defined(__AVR_ATmega32U4__)
         _polling = getPort()>PORT_4;
         _hard = getPort()==PORT_4;
+    #else
+    	_hard = getPort()==PORT_5;    
     #endif
 }
 
@@ -471,7 +473,7 @@ bool MeSerial::paramAvailable()
     char c = this->read();
     bool isParse = (millis()-_lastTime)>100&&_index>0;
     if(c > -1||isParse) {
-        if(c == '\n'||isParse) {
+        if(c == '\r'||isParse) {
             char str[_index];
             _cmds[_index] = '\0';
             strcpy(str, _cmds);
@@ -541,6 +543,9 @@ void MeSerial::findParamValue(char *str, int len, char *name)
     }
 }
 /*             LineFinder              */
+MeLineFinder::MeLineFinder(): MePort(0){
+	
+}
 MeLineFinder::MeLineFinder(uint8_t port): MePort(port)
 {
 
@@ -562,6 +567,14 @@ int MeLineFinder::readSensor2()
     return MePort::Dread2();
 }
 /*             LimitSwitch              */
+MeLimitSwitch::MeLimitSwitch(): MePort(0)
+{
+}
+MeLimitSwitch::MeLimitSwitch(uint8_t port): MePort(port)
+{
+    _device = DEV1;
+    pinMode(s2,INPUT_PULLUP);
+}
 MeLimitSwitch::MeLimitSwitch(uint8_t port,uint8_t device): MePort(port)
 {
     _device = device;
@@ -577,6 +590,10 @@ bool MeLimitSwitch::touched()
 }
 
 /*             MotorDriver              */
+MeDCMotor::MeDCMotor(): MePort(0)
+{
+
+}
 MeDCMotor::MeDCMotor(uint8_t port): MePort(port)
 {
 
@@ -599,6 +616,10 @@ void MeDCMotor::stop()
     MeDCMotor::run(0);
 }
 /*           UltrasonicSenser                 */
+MeUltrasonicSensor::MeUltrasonicSensor(): MePort(0)
+{
+}
+
 MeUltrasonicSensor::MeUltrasonicSensor(uint8_t port): MePort(port)
 {
 }
@@ -629,6 +650,9 @@ long MeUltrasonicSensor::measure()
 }
 
 /*          shutter       */
+MeShutter::MeShutter(): MePort(0){
+	
+}
 MeShutter::MeShutter(uint8_t port): MePort(port)
 {
     MePort::Dwrite1(LOW);
@@ -653,11 +677,18 @@ void MeShutter::focusOff()
 }
 
 /*           Bluetooth                 */
+MeBluetooth::MeBluetooth(): MeSerial(0)
+{
+}
 MeBluetooth::MeBluetooth(uint8_t port): MeSerial(port)
 {
 }
 
 /*           Infrared Receiver                 */
+MeInfraredReceiver::MeInfraredReceiver(): MeSerial(0)
+{
+	
+}
 MeInfraredReceiver::MeInfraredReceiver(uint8_t port): MeSerial(port)
 {
 }
@@ -1076,7 +1107,9 @@ static void initISR(timer16_Sequence_t timer)
 }
 
 /****************** end of static functions ******************************/
-
+MeServo::MeServo(): MePort(0){
+	
+}
 MeServo::MeServo(uint8_t port, uint8_t device): MePort(port)
 {
     servoPin = ( device == DEV1 ? s2 : s1);
@@ -1176,6 +1209,9 @@ bool MeServo::attached()
 
 
 /*Me4Button*/
+Me4Button::Me4Button() : MePort(0){
+	
+}
 Me4Button::Me4Button(uint8_t port) : MePort(port)
 {
     _toggleState = NULL_KEY;
@@ -1256,7 +1292,7 @@ uint8_t Me4Button::released()
 }
 
 /*      Joystick        */
-  
+MeJoystick::MeJoystick() : MePort(0){}
 MeJoystick::MeJoystick(uint8_t port) : MePort(port){}
 
 int MeJoystick::readX()
@@ -1284,7 +1320,7 @@ float MeJoystick::strength(){
 }
 
 /*      Light Sensor        */
-
+MeLightSensor::MeLightSensor() : MePort(0){}
 MeLightSensor::MeLightSensor(uint8_t port) : MePort(port){}
 int MeLightSensor::read()
 {	
@@ -1308,7 +1344,7 @@ float MeLightSensor::strength()
 }
 
 /*      Sound Sensor        */
-
+MeSoundSensor::MeSoundSensor() : MePort(0){}
 MeSoundSensor::MeSoundSensor(uint8_t port) : MePort(port){}
 bool MeSoundSensor::Dread()
 {	
