@@ -2,17 +2,13 @@
 #include <SoftwareSerial.h>
 #include <Wire.h>
 #include <avr/wdt.h>
-MeSerial serial(PORT_5);
+MeSerial serial;
 MeDCMotor motor1(M1);
 MeDCMotor motor2(M2);
 MeDCMotor motor3(PORT_1);
 MeDCMotor motor4(PORT_2);
-MeUltrasonicSensor ultrasonic;
-MeLimitSwitch limitSwitch;
-void setup() {
-  wdt_enable(WDTO_1S);
-  serial.begin(9600);
-}
+MeUltrasonicSensor us;
+MeLimitSwitch ls;
 char *device;
 char *method;
 int port;
@@ -21,10 +17,16 @@ int slot;
 int ultrasonic_port=-1;
 int switch_port=-1;
 int switch_slot=1;
+
+void setup() {
+  wdt_enable(WDTO_1S);
+  serial.begin(9600);
+  serial.println("application start");
+}
 void loop() {
   if(serial.paramAvailable()){
     
-    device = serial.getParamCode("device");
+    device=serial.getParamCode("device");
     port = serial.getParamValue("port");
     value = serial.getParamValue("value");
     slot = serial.getParamValue("slot");
@@ -48,31 +50,35 @@ void loop() {
         }
         break;
       }
-    }else if(strcmp(device,"Ultrasonic")==0){
+    }
+    if(strcmp(device,"Ultrasonic")==0){
       if(strcmp(method,"add")==0){
-        ultrasonic = MeUltrasonicSensor(port);
+        
         ultrasonic_port = port;
+        us.reset(port);
       }
-    }else if(strcmp(device,"Limit Switch")==0){
+    }
+    if(strcmp(device,"LimitSwitch")==0){
       if(strcmp(method,"add")==0){
-        limitSwitch = MeLimitSwitch(port,slot);
-        switch_port = port;
-        switch_slot = slot;
+          switch_port = port;
+          switch_slot = slot;
+          ls.reset(port,slot);
       }
-    }else if(strcmp(device,"poll")==0){
+    }
+    if(strcmp(device,"poll")==0){
       if(ultrasonic_port>-1){
         serial.print("Ultrasonic/Port");
         serial.print(ultrasonic_port);
         serial.print(" ");
-        serial.println(ultrasonic.distanceCm());
-      }
+        serial.println(us.distanceCm());
+      } 
       if(switch_port>-1){
-        serial.print("Limit Switch/Port");
+        serial.print("LimitSwitch/Port");
         serial.print(switch_port);
         serial.print("/Slot");
         serial.print(switch_slot);
         serial.print(" ");
-        serial.println(limitSwitch.touched());
+        serial.println(ls.touched()?"false":"true");
       }
     }
   }

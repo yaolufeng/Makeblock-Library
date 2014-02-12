@@ -17,6 +17,11 @@ MePort_Sig mePort[11] = {{NC, NC}, {11, 10}, {3, 9}, {12, 13}, {8, 2},
 
 
 /*        Port       */
+MePort::MePort(){
+	s1 = mePort[0].s1;
+    s2 = mePort[0].s2;
+    _port = 0;
+}
 MePort::MePort(uint8_t port)
 {
     s1 = mePort[port].s1;
@@ -46,6 +51,9 @@ TCCR2B = _BV(CS22);
 }
 uint8_t MePort::getPort(){
 	return _port;
+}
+uint8_t MePort::getSlot(){
+	return _slot;
 }
 bool MePort::Dread1()
 {
@@ -98,7 +106,17 @@ void MePort::Awrite2(int value)
 {
     analogWrite(s2, value); 
 }
-
+void MePort::reset(uint8_t port){
+	s1 = mePort[port].s1;
+    s2 = mePort[port].s2;
+    _port = port;
+}
+void MePort::reset(uint8_t port,uint8_t slot){
+	s1 = mePort[port].s1;
+    s2 = mePort[port].s2;
+    _port = port;
+    _slot = slot;
+}
 /*             Wire               */
 
 MeWire::MeWire(uint8_t port, uint8_t selector): MePort(port)
@@ -375,6 +393,10 @@ void MeParams::suffixObject(MeParamObject *prev, MeParamObject *item)
 }
 
 /*             Serial                  */
+MeSerial::MeSerial():MePort(),SoftwareSerial(NC,NC){
+    _hard = true;
+    _polling = false;
+}
 MeSerial::MeSerial(uint8_t port):MePort(port),SoftwareSerial(mePort[port].s2,mePort[port].s1)
 {
     _hard = false;
@@ -575,10 +597,10 @@ MeLimitSwitch::MeLimitSwitch(uint8_t port): MePort(port)
     _device = DEV1;
     pinMode(s2,INPUT_PULLUP);
 }
-MeLimitSwitch::MeLimitSwitch(uint8_t port,uint8_t device): MePort(port)
+MeLimitSwitch::MeLimitSwitch(uint8_t port,uint8_t slot): MePort(port)
 {
-    _device = device;
-    if(_device==DEV2){
+    reset(port,slot);
+    if(getSlot()==DEV2){
         pinMode(s1,INPUT_PULLUP);
     }else{
         pinMode(s2,INPUT_PULLUP);
@@ -586,7 +608,12 @@ MeLimitSwitch::MeLimitSwitch(uint8_t port,uint8_t device): MePort(port)
 }
 bool MeLimitSwitch::touched()                                                                                                                                                          
 {
-    return _device==DEV2?digitalRead(s1):digitalRead(s2);
+    if(getSlot()==DEV2){
+        pinMode(s1,INPUT_PULLUP);
+    }else{
+        pinMode(s2,INPUT_PULLUP);
+    }
+    return getSlot()==DEV2?digitalRead(s1):digitalRead(s2);
 }
 
 /*             MotorDriver              */

@@ -201,6 +201,7 @@ static bool _isServoBusy = false;
 class MePort
 {
 public:
+	MePort();
     ///@brief initialize the Port
     ///@param port port number of device
     MePort(uint8_t port);
@@ -208,7 +209,7 @@ public:
     ///@retval true on HIGH.
     ///@retval false on LOW.
     uint8_t getPort();
-
+	uint8_t getSlot();
     ///@return the level of pin 1 of port
     ///@retval true on HIGH.
     ///@retval false on LOW.
@@ -233,11 +234,13 @@ public:
     ///@brief set the PWM outpu value of pin 2 of port
     ///@param value between 0 to 255
     void Awrite2(int value);
-
+	void reset(uint8_t port);
+	void reset(uint8_t port,uint8_t slot);
 protected:
     uint8_t s1;
     uint8_t s2;
     uint8_t _port;
+    uint8_t _slot;
 };
 ///@brief Struct of MeParamObject
 typedef struct MeParamObject
@@ -297,6 +300,7 @@ protected:
 class MeSerial: public SoftwareSerial,public MePort
 {
 public:
+	MeSerial();
     ///@brief initialize
     ///@param port port number of device
     MeSerial(uint8_t port);
@@ -376,7 +380,7 @@ class MeLimitSwitch: public MePort
 public:
 	MeLimitSwitch();
 	MeLimitSwitch(uint8_t port);
-    MeLimitSwitch(uint8_t port,uint8_t device);
+    MeLimitSwitch(uint8_t port,uint8_t slot);
     bool touched();
 private:
     uint8_t _device;
