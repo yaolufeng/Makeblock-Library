@@ -1,4 +1,4 @@
-Makeblock Library v2.1.0210
+Makeblock Library v2.1.0212
 =============
 
 Library for Makeblock electronic modules
