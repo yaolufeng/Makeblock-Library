@@ -1,7 +1,6 @@
 #include "Makeblock.h"
 #include <SoftwareSerial.h>
 #include <Wire.h>
-#include <avr/wdt.h>
 MeSerial serial;
 MeDCMotor motor1(M1);
 MeDCMotor motor2(M2);
@@ -19,8 +18,9 @@ int switch_port=-1;
 int switch_slot=1;
 
 void setup() {
-  wdt_enable(WDTO_1S);
   serial.begin(9600);
+  while(!Serial){
+  }
   serial.println("application start");
 }
 void loop() {
@@ -82,5 +82,4 @@ void loop() {
       }
     }
   }
-  wdt_reset();
 }
