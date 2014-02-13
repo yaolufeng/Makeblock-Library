@@ -1,4 +1,4 @@
-///@file Makeblock.h head file of Makeblock Library V2.1.0212
+///@file Makeblock.h head file of Makeblock Library V2.1.0213
 ///Define the interface of Makeblock Library
 
 //#include <inttypes.h>
@@ -332,6 +332,7 @@ protected:
     int _index;
     bool _hard;
     bool _polling;
+    bool _scratch;
     int _bitPeriod;
     int _byte;
     long _lastTime;

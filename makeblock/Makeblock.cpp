@@ -395,10 +395,12 @@ void MeParams::suffixObject(MeParamObject *prev, MeParamObject *item)
 /*             Serial                  */
 MeSerial::MeSerial():MePort(),SoftwareSerial(NC,NC){
     _hard = true;
+    _scratch = true;
     _polling = false;
 }
 MeSerial::MeSerial(uint8_t port):MePort(port),SoftwareSerial(mePort[port].s2,mePort[port].s1)
 {
+	_scratch = false;
     _hard = false;
     _polling = false;
     #if defined(__AVR_ATmega32U4__)
@@ -414,7 +416,7 @@ void MeSerial::begin(long baudrate)
     _bitPeriod = 1000000/baudrate;
     if(_hard) {
 		#if defined(__AVR_ATmega32U4__)
-            Serial1.begin(baudrate);
+            _scratch?Serial.begin(baudrate):Serial1.begin(baudrate);
         #else
             Serial.begin(baudrate);
 		#endif
@@ -427,9 +429,9 @@ size_t MeSerial::write(uint8_t byte)
     if(_isServoBusy == true)return -1;
     if(_hard){
     	#if defined(__AVR_ATmega32U4__)
-            return Serial1.write(byte);
+            return (_scratch?Serial.write(byte):Serial1.write(byte));
         #else
-            Serial.write(byte);
+            return Serial.write(byte);
 		#endif
     }else return SoftwareSerial::write(byte);
 }
@@ -444,7 +446,7 @@ int MeSerial::read()
     }
     if(_hard){
 		#if defined(__AVR_ATmega32U4__)
-        	return Serial1.read();
+        	return (_scratch?Serial.read():Serial1.read());
         #else
         	return Serial.read();
 		#endif
@@ -458,7 +460,7 @@ int MeSerial::available()
     }
     if(_hard){
     	#if defined(__AVR_ATmega32U4__)
-        	return Serial1.available();
+        	return (_scratch?Serial.available():Serial1.available());
         #else
         	return Serial.available();
 		#endif
