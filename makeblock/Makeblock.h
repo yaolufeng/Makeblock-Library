@@ -1,4 +1,4 @@
-///@file Makeblock.h head file of Makeblock Library V2.1.0213
+///@file Makeblock.h head file of Makeblock Library V2.1.0217
 ///Define the interface of Makeblock Library
 
 //#include <inttypes.h>
@@ -341,6 +341,7 @@ protected:
 class MeWire: public MePort
 {
 public:
+	MeWire(uint8_t selector);
     ///@brief initialize
     ///@param port port number of device
     MeWire(uint8_t port, uint8_t selector);
@@ -355,6 +356,7 @@ public:
     void read(byte dataAddress,uint8_t *buf,int len);
     ///@brief send one byte data request for write one byte to slave address.
     void write(byte dataAddress, byte data);
+	void request(byte* writeData,byte*readData,int wlen,int rlen);
 protected:
     int _slaveAddress;
 };
@@ -478,6 +480,21 @@ public:
     ///@param lsB Blue brightness
     ///@param lsSpd Indicators flash speed
     void indicators(byte lsNum, byte lsR, byte lsG, byte lsB, byte lsSpd = IN_SPEED);
+};
+///@brief Class for Encoder Motor Driver
+class MeEncoderMotor: public MeWire{
+    public:
+        MeEncoderMotor(uint8_t selector);
+        boolean setCounter(uint8_t counter,uint8_t slot);
+        boolean setRatio(float ratio,uint8_t slot);
+        boolean setPID(float mp,float mi,float md,uint8_t mode,uint8_t slot);
+        boolean runWithAngleAndSpeed(long degrees,float speed,uint8_t slot);
+        boolean runWithTurns(float turns,uint8_t slot);
+        boolean runWithSpeedAndTime(float speed,long time,uint8_t slot);
+        boolean setCommandFlag(boolean flag,uint8_t slot);
+        float getCurrentSpeed(uint8_t slot);
+        long getCurrentPosition(uint8_t slot);
+        float getPIDParam(uint8_t type,uint8_t mode,uint8_t slot);
 };
 ///@brief Class for Stepper Motor Driver
 class MeStepperMotor: public MeWire

@@ -5,7 +5,7 @@
 
 #if defined(__AVR_ATmega32U4__) //MeBaseBoard use ATmega32U4 as MCU
 
-MePort_Sig mePort[11] = {{NC, NC}, {11, A8}, {13, A11}, {A10, A9}, {1, 0},
+MePort_Sig mePort[11] = {{NC, NC}, {A11, A8}, {13, 12}, {A10, A9}, {1, 0},
     {MISO, SCK}, {A0, A1}, {A2, A3}, {A4, A5}, {6, 7}, {5, 4}
 };
 #else // else ATmega328
@@ -15,6 +15,11 @@ MePort_Sig mePort[11] = {{NC, NC}, {11, 10}, {3, 9}, {12, 13}, {8, 2},
 
 #endif
 
+union{
+    byte b[4];
+    float fVal;
+    long lVal;
+}u;
 
 /*        Port       */
 MePort::MePort(){
@@ -118,7 +123,9 @@ void MePort::reset(uint8_t port,uint8_t slot){
     _slot = slot;
 }
 /*             Wire               */
-
+MeWire::MeWire(uint8_t selector): MePort(){
+	_slaveAddress = selector + 1;
+}
 MeWire::MeWire(uint8_t port, uint8_t selector): MePort(port)
 {
     _slaveAddress = selector + 1;
@@ -171,7 +178,28 @@ void MeWire::write(byte dataAddress, byte data)
     Wire.write(data); // sends one byte
     Wire.endTransmission(); // stop transmitting
 }
+void MeWire::request(byte* writeData,byte*readData,int wlen,int rlen)
+{
+   
+	uint8_t rxByte;
+	uint8_t index =0;
 
+	Wire.beginTransmission(_slaveAddress); // transmit to device
+
+	Wire.write(writeData,wlen);
+
+	Wire.endTransmission(); 
+	
+	delay(10);
+	Wire.requestFrom(_slaveAddress,rlen); // request 6 bytes from slave device
+	
+	while(Wire.available()) // slave may send less than requested
+	{
+		rxByte = Wire.read(); // receive a byte as character
+		readData[index] = rxByte;
+		index++; 
+	}
+}
 /*      MeParams       */
 MeParams::MeParams()
 {
@@ -789,7 +817,160 @@ void MeLedStrip::indicators(byte lsNum, byte lsR, byte lsG, byte lsB, byte lsSpd
     MeWire::write(LS_SET_PIXEL_B, lsB);
     MeWire::write(LS_RUN_CTRL, LS_INDICATORS);
 }
+/*          EncoderMotor        */
 
+MeEncoderMotor::MeEncoderMotor(uint8_t selector):MeWire(selector){
+    
+}
+boolean MeEncoderMotor::setCounter(uint8_t counter,uint8_t slot){
+    byte w[4]={0};
+    byte r[4]={0};
+    w[0]=0x91;
+    w[1]=0x23;
+    w[2]=slot;
+    w[3]=counter;
+    request(w,r,4,4);
+    return r[3]==1;
+}
+boolean MeEncoderMotor::setRatio(float ratio,uint8_t slot){
+    byte w[7]={0};
+    byte r[4]={0};
+    w[0]=0x91;
+    w[1]=0x22;
+    w[2]=slot;
+    u.fVal = ratio;
+    w[3]=u.b[0];
+    w[4]=u.b[1];
+    w[5]=u.b[2];
+    w[6]=u.b[3];
+    request(w,r,7,4);
+    return r[3]==1;
+}
+boolean MeEncoderMotor::setPID(float mp,float mi,float md,uint8_t mode,uint8_t slot){
+    
+    byte w[9]={0};
+    byte r[4]={0};
+    w[0]=0x91;
+    w[1]=0x24;
+    w[2]=slot;
+    w[4]=mode;
+    
+    int i;
+    
+    w[3]=0;
+    u.fVal = mp;
+    for(i=0;i<4;i++){
+        w[5+i]=u.b[0];
+    }
+    request(w,r,9,4);
+    
+    w[3]=1;
+    u.fVal = mi;
+    for(i=0;i<4;i++){
+        w[5+i]=u.b[0];
+    }
+    request(w,r,9,4);
+    
+    w[3]=2;
+    u.fVal = md;
+    for(i=0;i<4;i++){
+        w[5+i]=u.b[0];
+    }
+    request(w,r,9,4);
+    return r[3]==1;
+}
+boolean MeEncoderMotor::runWithAngleAndSpeed(long degrees,float speed,uint8_t slot){
+    byte w[9]={0};
+    byte r[4]={0};
+    w[0]=0x91;
+    w[1]=0x31;
+    w[2]=slot;
+    int i;
+    u.lVal = degrees;
+    for(i=0;i<4;i++){
+        w[3+i]=u.b[i];
+    }
+    u.fVal = speed;
+    for(i=0;i<4;i++){
+        w[7+i]=u.b[i];
+    }
+    request(w,r,11,4);
+    return r[3]==1;
+}
+boolean MeEncoderMotor::runWithTurns(float turns,uint8_t slot){
+    runWithAngleAndSpeed(turns*360,10,slot);
+}
+boolean MeEncoderMotor::runWithSpeedAndTime(float speed,long time,uint8_t slot){
+    byte w[9]={0};
+    byte r[4]={0};
+    w[0]=0x91;
+    w[1]=0x32;
+    w[2]=slot;
+    int i;
+    u.fVal = speed;
+    for(i=0;i<4;i++){
+        w[3+i]=u.b[i];
+    }
+    u.lVal = time;
+    for(i=0;i<4;i++){
+        w[7+i]=u.b[i];
+    }
+    request(w,r,11,4);
+    return r[3]==1;
+}
+boolean MeEncoderMotor::setCommandFlag(boolean flag,uint8_t slot){
+    byte w[4]={0};
+    byte r[4]={0};
+    w[0]=0x91;
+    w[1]=0x41;
+    w[2]=slot;
+    w[3]=flag;
+    request(w,r,4,4);
+    return r[3]==1;
+}
+float MeEncoderMotor::getCurrentSpeed(uint8_t slot){
+    byte w[3]={0};
+    byte r[7]={0};
+    w[0]=0x91;
+    w[1]=0x51;
+    w[2]=slot;
+    request(w,r,3,7);
+    int i;
+    for (i=0; i<4; i++) {
+        u.b[i]=r[3+i];
+    }
+    return u.fVal;
+}
+long MeEncoderMotor::getCurrentPosition(uint8_t slot){
+    byte w[3]={0};
+    byte r[7]={0};
+    w[0]=0x91;
+    w[1]=0x52;
+    w[2]=slot;
+    request(w,r,3,7);
+    int i;
+    for (i=0; i<4; i++) {
+        u.b[i]=r[3+i];
+    }
+    return u.lVal;
+}
+float MeEncoderMotor::getPIDParam(uint8_t type,uint8_t mode,uint8_t slot){
+    
+    byte w[5]={0};
+    byte r[7]={0};
+    w[0]=0x91;
+    w[1]=0x53;
+    w[2]=slot;
+    w[3]=type;
+    w[4]=mode;
+    request(w,r,5,7);
+    int i;
+    for (i=0; i<4; i++) {
+        u.b[i]=r[3+i];
+    }
+    return u.fVal;
+    
+}
 /*          Stepper     */
 
 MeStepperMotor::MeStepperMotor(uint8_t port, uint8_t selector): MeWire(port, selector)
