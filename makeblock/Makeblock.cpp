@@ -5,7 +5,7 @@
 
 #if defined(__AVR_ATmega32U4__) //MeBaseBoard use ATmega32U4 as MCU
 
-MePort_Sig mePort[11] = {{NC, NC}, {A11, A8}, {13, 12}, {A10, A9}, {1, 0},
+MePort_Sig mePort[11] = {{NC, NC}, {11, A8}, {13, A11}, {A10, A9}, {1, 0},
     {MISO, SCK}, {A0, A1}, {A2, A3}, {A4, A5}, {6, 7}, {5, 4}
 };
 #else // else ATmega328
