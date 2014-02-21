@@ -1,9 +1,9 @@
 /*************************************************************************
 * File Name          : TestLimitSwitch.ino
 * Author             : Evan
-* Updated            : Evan
-* Version            : V1.0.0
-* Date               : 5/27/2013
+* Updated            : Ander
+* Version            : V1.0.1
+* Date               : 2/21/2014
 * Description        : Example for Makeblock Electronic modules of 
                        Me-LimitSwitch. The module can only be connected to 
                        the PORT_3, PORT_4, PORT_5, and PORT_6 of Me - 
@@ -17,28 +17,26 @@
 #include <SoftwareSerial.h>
 #include <Wire.h>
 
-MeLimitSwitch limitSwitch(PORT_4,DEV1); //Me_LimitSwitch module can only be connected to PORT_3, PORT_4, PORT_5, PORT_6 of base shield.
+MeLimitSwitch limitSwitch(PORT_6); //Me_LimitSwitch module can only be connected to PORT_3, PORT_4, PORT_5, PORT_6 of base shield or from PORT_3 to PORT_8 of baseboard.
 
 void setup()
 {
     Serial.begin(9600);
     Serial.println("Start.");
 }
-
 void loop()
 {
-   if(limitSwitch.touched()==1) //If the limit switch is up, the "readUpPin" return value is true.
+   if(limitSwitch.touched()) //If the limit switch is up, the "readUpPin" return value is true.
    {
      Serial.println("State: UP.");
-     delay(5);  //We have designed the hardware disappears shakes circuit, add software disappears shakes to improve reliability.
-     //Delay time is usually 2 to 10 ms.
-     while(limitSwitch.touched()==1); //Repeat check the switch state, until released.
+     delay(1);
+     while(limitSwitch.touched()); //Repeat check the switch state, until released.
+     delay(2);
    }
-   if(limitSwitch.touched()==0) //If the limit switch is down, the "readDownPin" return value is true.
-   {
+   if(!limitSwitch.touched()){
      Serial.println("State: DOWN.");
-     delay(5);
-     while(limitSwitch.touched()==0);
+     delay(1);
+     while(!limitSwitch.touched());
+     delay(2);
    }
-   
 }
