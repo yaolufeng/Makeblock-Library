@@ -123,12 +123,12 @@ void MePort::reset(uint8_t port,uint8_t slot){
     _slot = slot;
 }
 /*             Wire               */
-MeWire::MeWire(uint8_t selector): MePort(){
-	_slaveAddress = selector + 1;
+MeWire::MeWire(uint8_t address): MePort(){
+	_slaveAddress = address + 1;
 }
-MeWire::MeWire(uint8_t port, uint8_t selector): MePort(port)
+MeWire::MeWire(uint8_t port, uint8_t address): MePort(port)
 {
-    _slaveAddress = selector + 1;
+    _slaveAddress = address + 1;
 }
 void MeWire::begin()
 {
@@ -140,9 +140,13 @@ bool MeWire::isRunning()
 {
     return read(BEGIN_STATE);
 }
-void MeWire::setSelectorIndex(uint8_t selectorIndex)
+void MeWire::setI2CBaseAddress(uint8_t baseAddress)
 {
-    write(LS_SET_ST_ADD, selectorIndex);
+    byte w[2]={0};
+    byte r[4]={0};
+    w[0]=0x21;
+    w[1]=baseAddress;
+    request(w,r,2,4);
 }
 
 byte MeWire::read(byte dataAddress){
@@ -190,12 +194,12 @@ void MeWire::request(byte* writeData,byte*readData,int wlen,int rlen)
 
 	Wire.endTransmission(); 
 	
-	delay(10);
 	Wire.requestFrom(_slaveAddress,rlen); // request 6 bytes from slave device
-	
+	delayMicroseconds(2);
 	while(Wire.available()) // slave may send less than requested
 	{
 		rxByte = Wire.read(); // receive a byte as character
+        
 		readData[index] = rxByte;
 		index++; 
 	}
@@ -432,13 +436,15 @@ MeSerial::MeSerial(uint8_t port):MePort(port),SoftwareSerial(mePort[port].s2,meP
     _hard = false;
     _polling = false;
     #if defined(__AVR_ATmega32U4__)
-        _polling = getPort()>PORT_4;
+        _polling = getPort()>PORT_5;
         _hard = getPort()==PORT_4;
     #else
     	_hard = getPort()==PORT_5;    
     #endif
 }
-
+void MeSerial::setHardware(bool mode){
+    _hard = mode;
+}
 void MeSerial::begin(long baudrate)
 {
     _bitPeriod = 1000000/baudrate;
@@ -751,6 +757,7 @@ MeInfraredReceiver::MeInfraredReceiver(uint8_t port): MeSerial(port)
 }
 void MeInfraredReceiver::begin()
 {
+    MeSerial::setHardware(false);
     MeSerial::begin(9600);
 }
 bool MeInfraredReceiver::buttonState()        // Not available in Switching mode
@@ -918,6 +925,26 @@ boolean MeEncoderMotor::runWithSpeedAndTime(float speed,long time,uint8_t slot){
     request(w,r,11,4);
     return r[3]==1;
 }
+
+boolean MeEncoderMotor::resetEncoder(uint8_t slot){
+    byte w[3]={0};
+    byte r[4]={0};
+    w[0]=0x91;
+    w[1]=0x54;
+    w[2]=slot;
+    request(w,r,11,3);
+    return r[3]==1;
+}
+boolean MeEncoderMotor::enableDebug(){
+    
+    byte w[2]={0};
+    byte r[4]={0};
+    w[0]=0x91;
+    w[1]=0x55;
+    request(w,r,11,2);
+    return r[3]==1;
+}
+
 boolean MeEncoderMotor::setCommandFlag(boolean flag,uint8_t slot){
     byte w[4]={0};
     byte r[4]={0};
@@ -952,7 +979,7 @@ long MeEncoderMotor::getCurrentPosition(uint8_t slot){
     for (i=0; i<4; i++) {
         u.b[i]=r[3+i];
     }
-    return u.lVal;
+    return u.fVal;
 }
 float MeEncoderMotor::getPIDParam(uint8_t type,uint8_t mode,uint8_t slot){
     

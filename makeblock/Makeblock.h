@@ -1,4 +1,4 @@
-///@file Makeblock.h head file of Makeblock Library V2.1.0217
+///@file Makeblock.h head file of Makeblock Library V2.1.0221
 ///Define the interface of Makeblock Library
 
 //#include <inttypes.h>
@@ -304,6 +304,7 @@ public:
     ///@brief initialize
     ///@param port port number of device
     MeSerial(uint8_t port);
+    void setHardware(bool mode);
     ///@brief Sets the data rate in bits per second (baud) for serial data transmission.
     ///@param baudrate use one of these rates: 300, 600, 1200, 2400, 4800, 9600, 14400, 19200, 28800, 38400, 57600, or 115200.
     void begin(long baudrate);
@@ -341,12 +342,12 @@ protected:
 class MeWire: public MePort
 {
 public:
-	MeWire(uint8_t selector);
+	MeWire(uint8_t address);
     ///@brief initialize
     ///@param port port number of device
-    MeWire(uint8_t port, uint8_t selector);
+    MeWire(uint8_t port, uint8_t address);
     ///@brief reset start index of i2c slave address.
-    void setSelectorIndex(uint8_t selectorIndex);
+    void setI2CBaseAddress(uint8_t baseAddress);
     bool isRunning();
     ///@brief Initiate the Wire library and join the I2C bus as a master or slave. This should normally be called only once.
     ///@param address the 7-bit slave address (optional); if not specified, join the bus as a master.
@@ -492,6 +493,8 @@ class MeEncoderMotor: public MeWire{
         boolean runWithTurns(float turns,uint8_t slot);
         boolean runWithSpeedAndTime(float speed,long time,uint8_t slot);
         boolean setCommandFlag(boolean flag,uint8_t slot);
+        boolean resetEncoder(uint8_t slot);
+        boolean enableDebug();
         float getCurrentSpeed(uint8_t slot);
         long getCurrentPosition(uint8_t slot);
         float getPIDParam(uint8_t type,uint8_t mode,uint8_t slot);
