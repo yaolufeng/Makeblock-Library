@@ -531,8 +531,7 @@ bool MeSerial::paramAvailable()
     bool isParse = (millis()-_lastTime)>100&&_index>0;
     if(this->available()) {
         char c = this->read();
-        Serial.print(c);
-        if(c == '\n'||isParse) {
+        if(c=='\r'||c == '\n'||isParse) {
             char str[_index];
             _cmds[_index] = '\0';
             strcpy(str, _cmds);
