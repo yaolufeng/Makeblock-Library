@@ -1352,30 +1352,29 @@ static void initISR(timer16_Sequence_t timer)
 
 /****************** end of static functions ******************************/
 MeServo::MeServo(): MePort(0){
-	
+	servoPin = NC;
+	if( ServoCount < MAX_SERVOS) {
+		this->servoIndex = ServoCount++;                    // assign a servo index to this instance
+		servos[this->servoIndex].ticks = usToTicks(DEFAULT_PULSE_WIDTH);   // store default values  - 12 Aug 2009
+	} else{
+		this->servoIndex = INVALID_SERVO ;  // too many servos
+	}
 }
 MeServo::MeServo(uint8_t port, uint8_t device): MePort(port)
 {
     servoPin = ( device == DEV1 ? s2 : s1);
-    if(port>0){
-	    if( ServoCount < MAX_SERVOS) {
-	        this->servoIndex = ServoCount++;                    // assign a servo index to this instance
-	        servos[this->servoIndex].ticks = usToTicks(DEFAULT_PULSE_WIDTH);   // store default values  - 12 Aug 2009
-	    } else
-	        this->servoIndex = INVALID_SERVO ;  // too many servos
-    }
+	if( ServoCount < MAX_SERVOS) {
+		this->servoIndex = ServoCount++;                    // assign a servo index to this instance
+		servos[this->servoIndex].ticks = usToTicks(DEFAULT_PULSE_WIDTH);   // store default values  - 12 Aug 2009
+	} else{
+		this->servoIndex = INVALID_SERVO ;  // too many servos
+	}
+    
 }
 void MeServo::reset(uint8_t port, uint8_t device)
 {
 	MePort::reset(port, device);
     servoPin = ( device == DEV1 ? s2 : s1);
-    if(port>0){
-	    if( ServoCount < MAX_SERVOS) {
-	        this->servoIndex = ServoCount++;                    // assign a servo index to this instance
-	        servos[this->servoIndex].ticks = usToTicks(DEFAULT_PULSE_WIDTH);   // store default values  - 12 Aug 2009
-	    } else
-	        this->servoIndex = INVALID_SERVO ;  // too many servos
-    }
 }
 uint8_t MeServo::begin()
 {
@@ -1392,8 +1391,9 @@ uint8_t MeServo::begin(int min, int max)
         this->max  = (MAX_PULSE_WIDTH - max) / 4;
         // initialize the timer if it has not already been initialized
         timer16_Sequence_t timer = SERVO_INDEX_TO_TIMER(servoIndex);
-        if(isTimerActive(timer) == false)
+        if(isTimerActive(timer) == false){
             initISR(timer);
+		}
         servos[this->servoIndex].Pin.isActive = true;  // this must be set after the check for isTimerActive
     }
     return this->servoIndex ;
@@ -1406,7 +1406,6 @@ void MeServo::detach()
     if(isTimerActive(timer) == false) {
         finISR(timer);
     }
-	ServoCount--;
 }
 
 void MeServo::write(int value)
