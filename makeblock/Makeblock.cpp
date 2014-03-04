@@ -528,20 +528,14 @@ int MeSerial::poll()
 }
 bool MeSerial::paramAvailable()
 {
+    char c = this->read();
     bool isParse = (millis()-_lastTime)>100&&_index>0;
-    if(this->available()) {
-        char c = this->read();
-        if(c=='\r'||c == '\n'||isParse) {
+    if(c > -1||isParse) {
+        if(c == '\n'||c == '\r'||isParse) {
             char str[_index];
             _cmds[_index] = '\0';
             strcpy(str, _cmds);
-            int i;
-            for(i=0;i<_index;i++){
-                if(_cmds[i]=='='){
-                    _params.parse(str);
-                    break;
-                }
-            }
+            _params.parse(str);
             _index = 0;
             return true;
         } else {
@@ -1351,29 +1345,30 @@ static void initISR(timer16_Sequence_t timer)
 
 /****************** end of static functions ******************************/
 MeServo::MeServo(): MePort(0){
-	servoPin = NC;
-	if( ServoCount < MAX_SERVOS) {
-		this->servoIndex = ServoCount++;                    // assign a servo index to this instance
-		servos[this->servoIndex].ticks = usToTicks(DEFAULT_PULSE_WIDTH);   // store default values  - 12 Aug 2009
-	} else{
-		this->servoIndex = INVALID_SERVO ;  // too many servos
-	}
+	
 }
 MeServo::MeServo(uint8_t port, uint8_t device): MePort(port)
 {
     servoPin = ( device == DEV1 ? s2 : s1);
-	if( ServoCount < MAX_SERVOS) {
-		this->servoIndex = ServoCount++;                    // assign a servo index to this instance
-		servos[this->servoIndex].ticks = usToTicks(DEFAULT_PULSE_WIDTH);   // store default values  - 12 Aug 2009
-	} else{
-		this->servoIndex = INVALID_SERVO ;  // too many servos
-	}
-    
+    if(port>0){
+	    if( ServoCount < MAX_SERVOS) {
+	        this->servoIndex = ServoCount++;                    // assign a servo index to this instance
+	        servos[this->servoIndex].ticks = usToTicks(DEFAULT_PULSE_WIDTH);   // store default values  - 12 Aug 2009
+	    } else
+	        this->servoIndex = INVALID_SERVO ;  // too many servos
+    }
 }
 void MeServo::reset(uint8_t port, uint8_t device)
 {
 	MePort::reset(port, device);
     servoPin = ( device == DEV1 ? s2 : s1);
+    if(port>0){
+	    if( ServoCount < MAX_SERVOS) {
+	        this->servoIndex = ServoCount++;                    // assign a servo index to this instance
+	        servos[this->servoIndex].ticks = usToTicks(DEFAULT_PULSE_WIDTH);   // store default values  - 12 Aug 2009
+	    } else
+	        this->servoIndex = INVALID_SERVO ;  // too many servos
+    }
 }
 uint8_t MeServo::begin()
 {
@@ -1390,9 +1385,8 @@ uint8_t MeServo::begin(int min, int max)
         this->max  = (MAX_PULSE_WIDTH - max) / 4;
         // initialize the timer if it has not already been initialized
         timer16_Sequence_t timer = SERVO_INDEX_TO_TIMER(servoIndex);
-        if(isTimerActive(timer) == false){
+        if(isTimerActive(timer) == false)
             initISR(timer);
-		}
         servos[this->servoIndex].Pin.isActive = true;  // this must be set after the check for isTimerActive
     }
     return this->servoIndex ;
@@ -1405,6 +1399,7 @@ void MeServo::detach()
     if(isTimerActive(timer) == false) {
         finISR(timer);
     }
+	ServoCount--;
 }
 
 void MeServo::write(int value)
@@ -1997,3 +1992,195 @@ float MeTemperature::temperature(){
 	return celsius;
 }
 
+static int8_t TubeTab[] = {0x3f,0x06,0x5b,0x4f,
+                           0x66,0x6d,0x7d,0x07,
+                           0x7f,0x6f,0x77,0x7c,
+                           0x39,0x5e,0x79,0x71,
+						   0xbf,0x86,0xdb,0xcf,
+						   0xe6,0xed,0xfd,0x87,
+						   0xff,0xef,0xf7,0xfc,
+						   0xb9,0xde,0xf9,0xf1};//0~9,A,b,C,d,E,F                        
+MeDigitalTube::MeDigitalTube():MePort()
+{
+}
+MeDigitalTube::MeDigitalTube(uint8_t port):MePort(port)
+{
+  Clkpin = s2;
+  Datapin = s1;
+  pinMode(Clkpin,OUTPUT);
+  pinMode(Datapin,OUTPUT);
+  set();
+  clearDisplay();
+}
+void MeDigitalTube::reset(uint8_t port){
+	
+  Clkpin = s2;
+  Datapin = s1;
+  pinMode(Clkpin,OUTPUT);
+  pinMode(Datapin,OUTPUT);
+  set();
+  clearDisplay();
+}
+void MeDigitalTube::init(void)
+{
+  clearDisplay();
+}
+
+void MeDigitalTube::writeByte(int8_t wr_data)
+{
+  uint8_t i,count1;   
+  for(i=0;i<8;i++)        //sent 8bit data
+  {
+    digitalWrite(Clkpin,LOW);      
+    if(wr_data & 0x01)digitalWrite(Datapin,HIGH);//LSB first
+    else digitalWrite(Datapin,LOW);
+    wr_data >>= 1;      
+    digitalWrite(Clkpin,HIGH);
+      
+  }  
+  digitalWrite(Clkpin,LOW); //wait for the ACK
+  digitalWrite(Datapin,HIGH);
+  digitalWrite(Clkpin,HIGH);     
+  pinMode(Datapin,INPUT);
+  while(digitalRead(Datapin))    
+  { 
+    count1 +=1;
+    if(count1 == 200)//
+    {
+     pinMode(Datapin,OUTPUT);
+     digitalWrite(Datapin,LOW);
+     count1 =0;
+    }
+    pinMode(Datapin,INPUT);
+  }
+  pinMode(Datapin,OUTPUT);
+  
+}
+//send start signal to TM1637
+void MeDigitalTube::start(void)
+{
+  digitalWrite(Clkpin,HIGH);//send start signal to TM1637
+  digitalWrite(Datapin,HIGH); 
+  digitalWrite(Datapin,LOW); 
+  digitalWrite(Clkpin,LOW); 
+} 
+//End of transmission
+void MeDigitalTube::stop(void)
+{
+  digitalWrite(Clkpin,LOW);
+  digitalWrite(Datapin,LOW);
+  digitalWrite(Clkpin,HIGH);
+  digitalWrite(Datapin,HIGH); 
+}
+void MeDigitalTube::display(float value){
+	
+	int i=0;
+	bool isStart = false;
+	int index = 0;
+	int8_t disp[]={
+		0,0,0,0
+	};
+	for(i=0;i<7;i++){
+		int n = checkNum(value,3-i);
+		if(n>=1||i==3){
+		 isStart=true; 
+		}
+		if(isStart){
+		  if(i==3){
+	 		disp[index]=n+0x10;
+		  }else{
+		 	disp[index]=n;
+		  }
+		  index++;
+	  	}
+		if(index>3){
+		 break; 
+		}
+	}
+	display(disp);
+}
+int MeDigitalTube::checkNum(float v,int b){
+ if(b>=0){
+	return floor((v-floor(v/pow(10,b+1))*(pow(10,b+1)))/pow(10,b));
+ }else{
+	b=-b;
+	int i=0;
+ 	for(i=0;i<b;i++){
+  		v = v*10;
+  	}
+	return ((int)(v)%10);
+ }
+}
+
+void MeDigitalTube::display(int8_t DispData[])
+{
+  int8_t SegData[4];
+  uint8_t i;
+  for(i = 0;i < 4;i ++)
+  {
+    SegData[i] = DispData[i];
+  }
+  coding(SegData);
+  start();          //start signal sent to TM1637 from MCU
+  writeByte(ADDR_AUTO);//
+  stop();           //
+  start();          //
+  writeByte(Cmd_SetAddr);//
+  for(i=0;i < 4;i ++)
+  {
+    writeByte(SegData[i]);        //
+  }
+  stop();           //
+  start();          //
+  writeByte(Cmd_DispCtrl);//
+  stop();           //
+}
+//******************************************
+void MeDigitalTube::display(uint8_t BitAddr,int8_t DispData)
+{
+  int8_t SegData;
+  SegData = coding(DispData);
+  start();          //start signal sent to TM1637 from MCU
+  writeByte(ADDR_FIXED);//
+  stop();           //
+  start();          //
+  writeByte(BitAddr|0xc0);//
+  writeByte(SegData);//
+  stop();            //
+  start();          //
+  writeByte(Cmd_DispCtrl);//
+  stop();           //
+}
+
+void MeDigitalTube::clearDisplay(void)
+{
+  display(0x00,0x7f);
+  display(0x01,0x7f);
+  display(0x02,0x7f);
+  display(0x03,0x7f);  
+}
+//To take effect the next time it displays.
+void MeDigitalTube::set(uint8_t brightness,uint8_t SetData,uint8_t SetAddr)
+{
+  Cmd_SetData = SetData;
+  Cmd_SetAddr = SetAddr;
+  Cmd_DispCtrl = 0x88 + brightness;//Set the brightness and it takes effect the next time it displays.
+}
+
+
+void MeDigitalTube::coding(int8_t DispData[])
+{
+  uint8_t PointData = 0; 
+  for(uint8_t i = 0;i < 4;i ++)
+  {
+    if(DispData[i] == 0x7f)DispData[i] = 0x00;
+    else DispData[i] = TubeTab[DispData[i]];
+  }
+}
+int8_t MeDigitalTube::coding(int8_t DispData)
+{
+  uint8_t PointData = 0; 
+  if(DispData == 0x7f) DispData = 0x00 + PointData;//The bit digital tube off
+  else DispData = TubeTab[DispData] + PointData;
+  return DispData;
+}
