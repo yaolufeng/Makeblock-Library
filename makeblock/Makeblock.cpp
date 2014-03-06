@@ -542,10 +542,12 @@ bool MeSerial::paramAvailable()
             for(i=0;i<_index;i++){
             	if(str[i]=='='&&i>0){
 		            _params.parse(str);
-		            return true;
+					_index = 0;
+					return true;
 	            }
             }
 			_index = 0;
+			return false;
         } else {
             _cmds[_index] = c;
             _index++;
