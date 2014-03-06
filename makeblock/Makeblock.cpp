@@ -528,16 +528,24 @@ int MeSerial::poll()
 }
 bool MeSerial::paramAvailable()
 {
-    char c = this->read();
     bool isParse = (millis()-_lastTime)>100&&_index>0;
-    if(c > -1||isParse) {
+    if(this->available()) {
+        char c = this->read();
         if(c == '\n'||c == '\r'||isParse) {
-            char str[_index];
+        	if(_index<3){
+	        	return false;
+	        }
             _cmds[_index] = '\0';
+            char str[_index];
             strcpy(str, _cmds);
-            _params.parse(str);
-            _index = 0;
-            return true;
+			int i=0;
+            for(i=0;i<_index;i++){
+            	if(str[i]=='='&&i>0){
+		            _params.parse(str);
+		            return true;
+	            }
+            }
+			_index = 0;
         } else {
             _cmds[_index] = c;
             _index++;
