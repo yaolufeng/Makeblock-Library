@@ -42,9 +42,6 @@ void setup()
     rightflag=false;
     randomSeed(analogRead(0));
     Serial.begin(9600);
-    buzzerOn();
-    delay(200);
-    buzzerOff();
 }
 
 void loop()
