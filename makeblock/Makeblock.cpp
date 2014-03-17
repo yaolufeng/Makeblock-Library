@@ -132,7 +132,7 @@ MeWire::MeWire(uint8_t port, uint8_t address): MePort(port)
 }
 void MeWire::begin()
 {
-    delay(1500);
+    delay(1000);
     Wire.begin();
     write(BEGIN_FLAG, 0x01);
 }
@@ -774,87 +774,231 @@ bool MeInfraredReceiver::buttonState()        // Not available in Switching mode
 {
     return !(MePort::Dread1());
 }
-/*         LED Strip        */
-// portNum can ONLY be PORT_1 or PORT_2
 
-MeLedStrip::MeLedStrip(uint8_t port, uint8_t selector): MeWire(port, selector)
-
-{
-
+MeRGBLed::MeRGBLed():MePort(0) {
+	setNumber(4);
 }
-// initialize ledStrip Driver and set the led quantity. (value: 1-60)
-void MeLedStrip::begin(int ledCount)
-{
-    MeWire::begin(); // join i2c bus (address optional for master)
-    MeWire::write(LS_LED_COUNT, ledCount);
-    reset();
+MeRGBLed::MeRGBLed(uint8_t port):MePort(port) {
+	pinMask = digitalPinToBitMask(s2);
+	ws2812_port = portOutputRegister(digitalPinToPort(s2));
+	ws2812_port_reg = portModeRegister(digitalPinToPort(s2));
+	setNumber(4);
 }
-void MeLedStrip::autoFlash(int flashSpeed)
-{
-    MeWire::write(LS_SET_SPEED, flashSpeed);
-    MeWire::write(LS_RUN_CTRL, LS_AUTO_FLASH);
+void MeRGBLed::reset(uint8_t port){
+	s2 = mePort[port].s2;
+	s1 = mePort[port].s1;
+	pinMask = digitalPinToBitMask(s2);
+	ws2812_port = portOutputRegister(digitalPinToPort(s2));
+	ws2812_port_reg = portModeRegister(digitalPinToPort(s2));
 }
-
-void MeLedStrip::onceFlash()
-{
-    MeWire::write(LS_RUN_CTRL, LS_ONCE_FLASH);
+void MeRGBLed::setNumber(uint8_t num_leds){
+	count_led = num_leds;
+	pixels = (uint8_t*)malloc(count_led*3);
 }
-
-void MeLedStrip::stopFlash()
-{
-    MeWire::write(LS_RUN_CTRL, LS_STOP_FLASH);
-}
-
-void MeLedStrip::reset()
-{
-    MeWire::write(LS_RUN_CTRL, LS_RESET);
-}
-
-void MeLedStrip::setPixelColor(byte lsNum, byte lsR, byte lsG, byte lsB, byte lsMode)
-{
-    MeWire::write(LS_SET_PIXEL_R, lsR);
-    MeWire::write(LS_SET_PIXEL_G, lsG);
-    MeWire::write(LS_SET_PIXEL_B, lsB);
-    MeWire::write(LS_SET_PIXEL_NUM, lsNum);
-    MeWire::write(LS_RUN_CTRL, lsMode);
+cRGB MeRGBLed::getColorAt(uint8_t index) {
+	
+	cRGB px_value;
+	
+	if(index < count_led) {
+		
+		uint8_t tmp;
+		tmp = index * 3;
+		
+		px_value.g = pixels[tmp];
+		px_value.r = pixels[tmp+1];
+		px_value.b = pixels[tmp+2];
+	}
+	
+	return px_value;
 }
 
+uint8_t MeRGBLed::getNumber(){
+	return count_led;
+}
+bool MeRGBLed::setColorAt(uint8_t index, uint8_t red,uint8_t green,uint8_t blue) {
+	if(index < count_led) {
+		uint8_t tmp = index * 3;
+		pixels[tmp] = green;
+		pixels[tmp+1] = red;
+		pixels[tmp+2] = blue;
+		
+		return true;
+	} 
+	return false;
+}
+/*
+  This routine writes an array of bytes with RGB values to the Dataout pin
+  using the fast 800kHz clockless WS2811/2812 protocol.
+*/
 
-void MeLedStrip::color_loop()
+// Timing in ns
+#define w_zeropulse   350
+#define w_onepulse    900
+#define w_totalperiod 1250
+
+// Fixed cycles used by the inner loop
+#define w_fixedlow    3
+#define w_fixedhigh   6
+#define w_fixedtotal  10   
+
+// Insert NOPs to match the timing, if possible
+#define w_zerocycles    (((F_CPU/1000)*w_zeropulse          )/1000000)
+#define w_onecycles     (((F_CPU/1000)*w_onepulse    +500000)/1000000)
+#define w_totalcycles   (((F_CPU/1000)*w_totalperiod +500000)/1000000)
+
+// w1 - nops between rising edge and falling edge - low
+#define w1 (w_zerocycles-w_fixedlow)
+// w2   nops between fe low and fe high
+#define w2 (w_onecycles-w_fixedhigh-w1)
+// w3   nops to complete loop
+#define w3 (w_totalcycles-w_fixedtotal-w1-w2)
+
+#if w1>0
+  #define w1_nops w1
+#else
+  #define w1_nops  0
+#endif
+
+// The only critical timing parameter is the minimum pulse length of the "0"
+// Warn or throw error if this timing can not be met with current F_CPU settings.
+#define w_lowtime ((w1_nops+w_fixedlow)*1000000)/(F_CPU/1000)
+#if w_lowtime>550
+   #error "Light_ws2812: Sorry, the clock speed is too low. Did you set F_CPU correctly?"
+#elif w_lowtime>450
+   #warning "Light_ws2812: The timing is critical and may only work on WS2812B, not on WS2812(S)."
+   #warning "Please consider a higher clockspeed, if possible"
+#endif   
+
+#if w2>0
+#define w2_nops w2
+#else
+#define w2_nops  0
+#endif
+
+#if w3>0
+#define w3_nops w3
+#else
+#define w3_nops  0
+#endif
+
+#define w_nop1  "nop      \n\t"
+#define w_nop2  "rjmp .+0 \n\t"
+#define w_nop4  w_nop2 w_nop2
+#define w_nop8  w_nop4 w_nop4
+#define w_nop16 w_nop8 w_nop8
+
+void  MeRGBLed::rgbled_sendarray_mask(uint8_t *data,uint16_t datlen,uint8_t maskhi,uint8_t *port, uint8_t *portreg)
 {
-    MeWire::write(LS_RUN_CTRL, LS_COLOR_LOOP);
+  uint8_t curbyte,ctr,masklo;
+  uint8_t sreg_prev;
+  
+  masklo = ~maskhi & *portreg;
+  maskhi |= *portreg;
+  sreg_prev=SREG;
+  cli();  
+
+  while (datlen--) {
+    curbyte=*data++;
+    
+    asm volatile(
+    "       ldi   %0,8  \n\t"
+    "loop%=:            \n\t"
+    "       st    X,%3 \n\t"    //  '1' [02] '0' [02] - re
+#if (w1_nops&1)
+w_nop1
+#endif
+#if (w1_nops&2)
+w_nop2
+#endif
+#if (w1_nops&4)
+w_nop4
+#endif
+#if (w1_nops&8)
+w_nop8
+#endif
+#if (w1_nops&16)
+w_nop16
+#endif
+    "       sbrs  %1,7  \n\t"    //  '1' [04] '0' [03]
+    "       st    X,%4 \n\t"     //  '1' [--] '0' [05] - fe-low
+    "       lsl   %1    \n\t"    //  '1' [05] '0' [06]
+#if (w2_nops&1)
+  w_nop1
+#endif
+#if (w2_nops&2)
+  w_nop2
+#endif
+#if (w2_nops&4)
+  w_nop4
+#endif
+#if (w2_nops&8)
+  w_nop8
+#endif
+#if (w2_nops&16)
+  w_nop16 
+#endif
+    "       brcc skipone%= \n\t"    //  '1' [+1] '0' [+2] - 
+    "       st   X,%4      \n\t"    //  '1' [+3] '0' [--] - fe-high
+    "skipone%=:               "     //  '1' [+3] '0' [+2] - 
+
+#if (w3_nops&1)
+w_nop1
+#endif
+#if (w3_nops&2)
+w_nop2
+#endif
+#if (w3_nops&4)
+w_nop4
+#endif
+#if (w3_nops&8)
+w_nop8
+#endif
+#if (w3_nops&16)
+w_nop16
+#endif
+
+    "       dec   %0    \n\t"    //  '1' [+4] '0' [+3]
+    "       brne  loop%=\n\t"    //  '1' [+5] '0' [+4]
+    :	"=&d" (ctr)
+//    :	"r" (curbyte), "I" (_SFR_IO_ADDR(ws2812_PORTREG)), "r" (maskhi), "r" (masklo)
+    :	"r" (curbyte), "x" (port), "r" (maskhi), "r" (masklo)
+    );
+  }
+  
+  SREG=sreg_prev;
+}
+void MeRGBLed::sync() {
+	*ws2812_port_reg |= pinMask; // Enable DDR
+	rgbled_sendarray_mask(pixels,3*count_led,pinMask,(uint8_t*) ws2812_port,(uint8_t*) ws2812_port_reg );	
 }
 
-void MeLedStrip::indicators(byte lsNum, byte lsR, byte lsG, byte lsB, byte lsSpd)
-{
-    MeWire::write(LS_SET_COUNT, lsNum);
-    MeWire::write(LS_SET_IN_SPEED, lsSpd);
-    MeWire::write(LS_SET_PIXEL_R, lsR);
-    MeWire::write(LS_SET_PIXEL_G, lsG);
-    MeWire::write(LS_SET_PIXEL_B, lsB);
-    MeWire::write(LS_RUN_CTRL, LS_INDICATORS);
+MeRGBLed::~MeRGBLed() {
+	
+	
 }
+
 /*          EncoderMotor        */
 
-MeEncoderMotor::MeEncoderMotor(uint8_t selector):MeWire(selector){
-    
+MeEncoderMotor::MeEncoderMotor(uint8_t selector,uint8_t slot):MeWire(selector){
+    _slot = slot;
 }
-boolean MeEncoderMotor::setCounter(uint8_t counter,uint8_t slot){
-    byte w[4]={0};
+boolean MeEncoderMotor::setCounter(uint8_t counter){
+    byte w[5]={0};
     byte r[4]={0};
     w[0]=0x91;
     w[1]=0x23;
-    w[2]=slot;
-    w[3]=counter;
-    request(w,r,4,4);
+    w[2]=0;
+    w[3]=_slot;
+    w[4]=counter;
+    request(w,r,5,4);
     return r[3]==1;
 }
-boolean MeEncoderMotor::setRatio(float ratio,uint8_t slot){
+boolean MeEncoderMotor::setRatio(float ratio){
     byte w[7]={0};
     byte r[4]={0};
     w[0]=0x91;
     w[1]=0x22;
-    w[2]=slot;
+    w[2]=_slot;
     u.fVal = ratio;
     w[3]=u.b[0];
     w[4]=u.b[1];
@@ -863,13 +1007,13 @@ boolean MeEncoderMotor::setRatio(float ratio,uint8_t slot){
     request(w,r,7,4);
     return r[3]==1;
 }
-boolean MeEncoderMotor::setPID(float mp,float mi,float md,uint8_t mode,uint8_t slot){
+boolean MeEncoderMotor::setPID(float mp,float mi,float md,uint8_t mode){
     
     byte w[9]={0};
     byte r[4]={0};
     w[0]=0x91;
     w[1]=0x24;
-    w[2]=slot;
+    w[2]=_slot;
     w[4]=mode;
     
     int i;
@@ -877,31 +1021,31 @@ boolean MeEncoderMotor::setPID(float mp,float mi,float md,uint8_t mode,uint8_t s
     w[3]=0;
     u.fVal = mp;
     for(i=0;i<4;i++){
-        w[5+i]=u.b[0];
+        w[5+i]=u.b[i];
     }
     request(w,r,9,4);
     
     w[3]=1;
     u.fVal = mi;
     for(i=0;i<4;i++){
-        w[5+i]=u.b[0];
+        w[5+i]=u.b[i];
     }
     request(w,r,9,4);
     
     w[3]=2;
     u.fVal = md;
     for(i=0;i<4;i++){
-        w[5+i]=u.b[0];
+        w[5+i]=u.b[i];
     }
     request(w,r,9,4);
     return r[3]==1;
 }
-boolean MeEncoderMotor::runWithAngleAndSpeed(long degrees,float speed,uint8_t slot){
-    byte w[9]={0};
+boolean MeEncoderMotor::moveTo(long degrees,float speed){
+	byte w[9]={0};
     byte r[4]={0};
     w[0]=0x91;
-    w[1]=0x31;
-    w[2]=slot;
+    w[1]=0x32;
+    w[2]=_slot;
     int i;
     u.lVal = degrees;
     for(i=0;i<4;i++){
@@ -914,15 +1058,36 @@ boolean MeEncoderMotor::runWithAngleAndSpeed(long degrees,float speed,uint8_t sl
     request(w,r,11,4);
     return r[3]==1;
 }
-boolean MeEncoderMotor::runWithTurns(float turns,uint8_t slot){
-    runWithAngleAndSpeed(turns*360,10,slot);
-}
-boolean MeEncoderMotor::runWithSpeedAndTime(float speed,long time,uint8_t slot){
+boolean MeEncoderMotor::move(long degrees,float speed){
     byte w[9]={0};
     byte r[4]={0};
     w[0]=0x91;
-    w[1]=0x32;
-    w[2]=slot;
+    w[1]=0x31;
+    w[2]=_slot;
+    int i;
+    u.lVal = degrees;
+    for(i=0;i<4;i++){
+        w[3+i]=u.b[i];
+    }
+    u.fVal = speed;
+    for(i=0;i<4;i++){
+        w[7+i]=u.b[i];
+    }
+    request(w,r,11,4);
+    return r[3]==1;
+}
+boolean MeEncoderMotor::runTurns(float turns){
+    return move(turns*360,10);
+}
+boolean MeEncoderMotor::runSpeed(float speed){
+	return runSpeedAndTime(speed,0);
+}
+boolean MeEncoderMotor::runSpeedAndTime(float speed,long time){
+    byte w[9]={0};
+    byte r[4]={0};
+    w[0]=0x91;
+    w[1]=0x33;
+    w[2]=_slot;
     int i;
     u.fVal = speed;
     for(i=0;i<4;i++){
@@ -936,12 +1101,12 @@ boolean MeEncoderMotor::runWithSpeedAndTime(float speed,long time,uint8_t slot){
     return r[3]==1;
 }
 
-boolean MeEncoderMotor::resetEncoder(uint8_t slot){
+boolean MeEncoderMotor::resetEncoder(){
     byte w[3]={0};
     byte r[4]={0};
     w[0]=0x91;
     w[1]=0x54;
-    w[2]=slot;
+    w[2]=_slot;
     request(w,r,11,3);
     return r[3]==1;
 }
@@ -955,22 +1120,22 @@ boolean MeEncoderMotor::enableDebug(){
     return r[3]==1;
 }
 
-boolean MeEncoderMotor::setCommandFlag(boolean flag,uint8_t slot){
+boolean MeEncoderMotor::setCommandFlag(boolean flag){
     byte w[4]={0};
     byte r[4]={0};
     w[0]=0x91;
     w[1]=0x41;
-    w[2]=slot;
+    w[2]=_slot;
     w[3]=flag;
     request(w,r,4,4);
     return r[3]==1;
 }
-float MeEncoderMotor::getCurrentSpeed(uint8_t slot){
+float MeEncoderMotor::getCurrentSpeed(){
     byte w[3]={0};
     byte r[7]={0};
     w[0]=0x91;
     w[1]=0x51;
-    w[2]=slot;
+    w[2]=_slot;
     request(w,r,3,7);
     int i;
     for (i=0; i<4; i++) {
@@ -978,12 +1143,12 @@ float MeEncoderMotor::getCurrentSpeed(uint8_t slot){
     }
     return u.fVal;
 }
-long MeEncoderMotor::getCurrentPosition(uint8_t slot){
+float MeEncoderMotor::getCurrentPosition(){
     byte w[3]={0};
     byte r[7]={0};
     w[0]=0x91;
     w[1]=0x52;
-    w[2]=slot;
+    w[2]=_slot;
     request(w,r,3,7);
     int i;
     for (i=0; i<4; i++) {
@@ -991,19 +1156,19 @@ long MeEncoderMotor::getCurrentPosition(uint8_t slot){
     }
     return u.fVal;
 }
-float MeEncoderMotor::getPIDParam(uint8_t type,uint8_t mode,uint8_t slot){
+float MeEncoderMotor::getPIDParam(uint8_t type,uint8_t mode){
     
     byte w[5]={0};
-    byte r[7]={0};
+    byte r[9]={0};
     w[0]=0x91;
     w[1]=0x53;
-    w[2]=slot;
+    w[2]=_slot;
     w[3]=type;
     w[4]=mode;
-    request(w,r,5,7);
+    request(w,r,5,9);
     int i;
     for (i=0; i<4; i++) {
-        u.b[i]=r[3+i];
+        u.b[i]=r[5+i];
     }
     return u.fVal;
     
@@ -1360,13 +1525,7 @@ MeServo::MeServo(): MePort(0){
 MeServo::MeServo(uint8_t port, uint8_t device): MePort(port)
 {
     servoPin = ( device == DEV1 ? s2 : s1);
-    if(port>0){
-	    if( ServoCount < MAX_SERVOS) {
-	        this->servoIndex = ServoCount++;                    // assign a servo index to this instance
-	        servos[this->servoIndex].ticks = usToTicks(DEFAULT_PULSE_WIDTH);   // store default values  - 12 Aug 2009
-	    } else
-	        this->servoIndex = INVALID_SERVO ;  // too many servos
-    }
+    reset(port,device);
 }
 void MeServo::reset(uint8_t port, uint8_t device)
 {
@@ -2009,11 +2168,11 @@ static int8_t TubeTab[] = {0x3f,0x06,0x5b,0x4f,
 						   0xbf,0x86,0xdb,0xcf,
 						   0xe6,0xed,0xfd,0x87,
 						   0xff,0xef,0xf7,0xfc,
-						   0xb9,0xde,0xf9,0xf1};//0~9,A,b,C,d,E,F                        
-MeDigitalTube::MeDigitalTube():MePort()
+						   0xb9,0xde,0xf9,0xf1,0x40};//0~9,A,b,C,d,E,F,-                    
+MeNumericDisplay::MeNumericDisplay():MePort()
 {
 }
-MeDigitalTube::MeDigitalTube(uint8_t port):MePort(port)
+MeNumericDisplay::MeNumericDisplay(uint8_t port):MePort(port)
 {
   Clkpin = s2;
   Datapin = s1;
@@ -2022,8 +2181,8 @@ MeDigitalTube::MeDigitalTube(uint8_t port):MePort(port)
   set();
   clearDisplay();
 }
-void MeDigitalTube::reset(uint8_t port){
-	
+void MeNumericDisplay::reset(uint8_t port){
+  reset(port);
   Clkpin = s2;
   Datapin = s1;
   pinMode(Clkpin,OUTPUT);
@@ -2031,12 +2190,12 @@ void MeDigitalTube::reset(uint8_t port){
   set();
   clearDisplay();
 }
-void MeDigitalTube::init(void)
+void MeNumericDisplay::init(void)
 {
   clearDisplay();
 }
 
-void MeDigitalTube::writeByte(int8_t wr_data)
+void MeNumericDisplay::writeByte(int8_t wr_data)
 {
   uint8_t i,count1;   
   for(i=0;i<8;i++)        //sent 8bit data
@@ -2067,7 +2226,7 @@ void MeDigitalTube::writeByte(int8_t wr_data)
   
 }
 //send start signal to TM1637
-void MeDigitalTube::start(void)
+void MeNumericDisplay::start(void)
 {
   digitalWrite(Clkpin,HIGH);//send start signal to TM1637
   digitalWrite(Datapin,HIGH); 
@@ -2075,14 +2234,14 @@ void MeDigitalTube::start(void)
   digitalWrite(Clkpin,LOW); 
 } 
 //End of transmission
-void MeDigitalTube::stop(void)
+void MeNumericDisplay::stop(void)
 {
   digitalWrite(Clkpin,LOW);
   digitalWrite(Datapin,LOW);
   digitalWrite(Clkpin,HIGH);
   digitalWrite(Datapin,HIGH); 
 }
-void MeDigitalTube::display(float value){
+void MeNumericDisplay::display(float value){
 	
 	int i=0;
 	bool isStart = false;
@@ -2090,6 +2249,13 @@ void MeDigitalTube::display(float value){
 	int8_t disp[]={
 		0,0,0,0
 	};
+	bool isNeg = false;
+	if(value<0){
+		isNeg = true;
+		value = -value;
+		disp[0] = 0x20;
+		index++;
+	}
 	for(i=0;i<7;i++){
 		int n = checkNum(value,3-i);
 		if(n>=1||i==3){
@@ -2109,7 +2275,7 @@ void MeDigitalTube::display(float value){
 	}
 	display(disp);
 }
-int MeDigitalTube::checkNum(float v,int b){
+int MeNumericDisplay::checkNum(float v,int b){
  if(b>=0){
 	return floor((v-floor(v/pow(10,b+1))*(pow(10,b+1)))/pow(10,b));
  }else{
@@ -2122,7 +2288,7 @@ int MeDigitalTube::checkNum(float v,int b){
  }
 }
 
-void MeDigitalTube::display(int8_t DispData[])
+void MeNumericDisplay::display(int8_t DispData[])
 {
   int8_t SegData[4];
   uint8_t i;
@@ -2146,7 +2312,7 @@ void MeDigitalTube::display(int8_t DispData[])
   stop();           //
 }
 //******************************************
-void MeDigitalTube::display(uint8_t BitAddr,int8_t DispData)
+void MeNumericDisplay::display(uint8_t BitAddr,int8_t DispData)
 {
   int8_t SegData;
   SegData = coding(DispData);
@@ -2162,7 +2328,7 @@ void MeDigitalTube::display(uint8_t BitAddr,int8_t DispData)
   stop();           //
 }
 
-void MeDigitalTube::clearDisplay(void)
+void MeNumericDisplay::clearDisplay(void)
 {
   display(0x00,0x7f);
   display(0x01,0x7f);
@@ -2170,7 +2336,7 @@ void MeDigitalTube::clearDisplay(void)
   display(0x03,0x7f);  
 }
 //To take effect the next time it displays.
-void MeDigitalTube::set(uint8_t brightness,uint8_t SetData,uint8_t SetAddr)
+void MeNumericDisplay::set(uint8_t brightness,uint8_t SetData,uint8_t SetAddr)
 {
   Cmd_SetData = SetData;
   Cmd_SetAddr = SetAddr;
@@ -2178,7 +2344,7 @@ void MeDigitalTube::set(uint8_t brightness,uint8_t SetData,uint8_t SetAddr)
 }
 
 
-void MeDigitalTube::coding(int8_t DispData[])
+void MeNumericDisplay::coding(int8_t DispData[])
 {
   uint8_t PointData = 0; 
   for(uint8_t i = 0;i < 4;i ++)
@@ -2187,10 +2353,19 @@ void MeDigitalTube::coding(int8_t DispData[])
     else DispData[i] = TubeTab[DispData[i]];
   }
 }
-int8_t MeDigitalTube::coding(int8_t DispData)
+int8_t MeNumericDisplay::coding(int8_t DispData)
 {
   uint8_t PointData = 0; 
   if(DispData == 0x7f) DispData = 0x00 + PointData;//The bit digital tube off
   else DispData = TubeTab[DispData] + PointData;
   return DispData;
+}
+MePotentiometer::MePotentiometer():MePort(0){
+
+}
+MePotentiometer::MePotentiometer(uint8_t port):MePort(port){
+
+}
+uint16_t MePotentiometer::read(){
+	return MePort::Aread2();
 }

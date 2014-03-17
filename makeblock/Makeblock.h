@@ -1,4 +1,4 @@
-///@file Makeblock.h head file of Makeblock Library V2.1.0304
+///@file Makeblock.h head file of Makeblock Library V2.1.0317
 ///Define the interface of Makeblock Library
 
 //#include <inttypes.h>
@@ -10,6 +10,13 @@
 #include <SoftwareSerial.h>
 #include <Wire.h>
 #include <avr/interrupt.h>
+#include <avr/io.h>
+#ifndef F_CPU
+#define  F_CPU 16000000UL
+#endif
+#include <util/delay.h>
+#include <stdint.h>
+#include <stdlib.h>
 
 ///@brief Struct of MePort_Sig
 typedef struct
@@ -18,6 +25,8 @@ typedef struct
     uint8_t s2;
 } MePort_Sig;
 extern MePort_Sig mePort[11];//mePort[0] is nonsense
+
+struct cRGB { uint8_t g; uint8_t r; uint8_t b; };
 
 #define NC 					-1
 
@@ -453,67 +462,48 @@ public:
     ///@brief check press state of button
     bool buttonState();
 };
-///@brief class for Led Strip Module
-class MeLedStrip : public MeWire
-{
-public:
-    ///@brief initialize,portNum can ONLY be PORT_1 or PORT_2
-    MeLedStrip(uint8_t port, uint8_t selector);
+class MeRGBLed:public MePort {
+public: 
+	MeRGBLed();
+	MeRGBLed(uint8_t port);
+	~MeRGBLed();
+	void reset(uint8_t port);
+	void setNumber(uint8_t num_led);
+	uint8_t getNumber();
+	cRGB getColorAt(uint8_t index);
+	bool setColorAt(uint8_t index, uint8_t red,uint8_t green,uint8_t blue);
+	void sync();
+	
+private:
+	uint16_t count_led;
+	uint8_t *pixels;
+	
+	void rgbled_sendarray_mask(uint8_t *array,uint16_t length, uint8_t pinmask,uint8_t *port, uint8_t *portreg);
 
-    ///@brief start ledStrip Driver and set the led quantity. (value: 1-60)
-    void begin(int ledCount);
-
-    ///@brief Automatic cycle refresh each LED. After perform this function, the led refresh automatically.You can set the reflash time. Max value = 255.
-    void autoFlash(int flashSpeed = 0);
-
-    ///@brief Refresh once LED, Entirely by the loop function to refresh the LED Strip. When you need to write multiple leds,use the LS_ONCE_FLASH mode to refresh all LED when writing the last LED, in front of the led use LS_NO_FLASH mode,it can speed up the refresh.
-    void onceFlash();
-
-    ///@brief Stop all led of strip. But it doesn't close the leds. All LED to keep the last state.
-    void stopFlash();
-
-    ///@brief Stop and reset all led of strip.
-    void reset();
-
-    bool readState();
-
-    ///@brief Write each LED color and refresh mode.
-    ///@param lsNum LED Number
-    ///@param lsR Red brightness
-    ///@param lsG Green brightness
-    ///@param lsB Blue brightness
-    ///@param lsMode LS_AUTO_FLASH : Automatic cycle refresh each LED. After perform this function, the led refresh automatically.This mode is not commonly used.LS_ONCE_FLASH : Please refer to the instructions of onceFlash().
-    void setPixelColor(byte lsNum = LS_ALL_PIXEL, byte lsR = MIN_BRI, byte lsG = MIN_BRI, byte lsB = MIN_BRI, byte lsMode = LS_ONCE_FLASH);
-
-    //long getPixelColor(byte n);
-
-    ///@brief Color gradient LED Scroller function.Automatically refresh after initialization, you can use stopFlash() to stop flash, but it doesn't close leds.use the reset() to stop and reset led.
-    void color_loop();
-
-    ///@brief This is an indicator function that is used to display range quickly.
-    ///@param lsNum LED Number
-    ///@param lsR Red brightness
-    ///@param lsG Green brightness
-    ///@param lsB Blue brightness
-    ///@param lsSpd Indicators flash speed
-    void indicators(byte lsNum, byte lsR, byte lsG, byte lsB, byte lsSpd = IN_SPEED);
+	const volatile uint8_t *ws2812_port;
+	volatile uint8_t *ws2812_port_reg;
+	uint8_t pinMask; 
 };
 ///@brief Class for Encoder Motor Driver
 class MeEncoderMotor: public MeWire{
     public:
-        MeEncoderMotor(uint8_t selector);
-        boolean setCounter(uint8_t counter,uint8_t slot);
-        boolean setRatio(float ratio,uint8_t slot);
-        boolean setPID(float mp,float mi,float md,uint8_t mode,uint8_t slot);
-        boolean runWithAngleAndSpeed(long degrees,float speed,uint8_t slot);
-        boolean runWithTurns(float turns,uint8_t slot);
-        boolean runWithSpeedAndTime(float speed,long time,uint8_t slot);
-        boolean setCommandFlag(boolean flag,uint8_t slot);
-        boolean resetEncoder(uint8_t slot);
+        MeEncoderMotor(uint8_t selector,uint8_t slot);
+        boolean setCounter(uint8_t counter);
+        boolean setRatio(float ratio);
+        boolean setPID(float mp,float mi,float md,uint8_t mode);
+        boolean move(long degrees,float speed);
+        boolean moveTo(long degrees,float speed);
+        boolean runTurns(float turns);
+        boolean runSpeed(float speed);
+        boolean runSpeedAndTime(float speed,long time);
+        boolean setCommandFlag(boolean flag);
+        boolean resetEncoder();
         boolean enableDebug();
-        float getCurrentSpeed(uint8_t slot);
-        long getCurrentPosition(uint8_t slot);
-        float getPIDParam(uint8_t type,uint8_t mode,uint8_t slot);
+        float getCurrentSpeed();
+        float getCurrentPosition();
+        float getPIDParam(uint8_t type,uint8_t mode);
+    private:
+    	uint8_t _slot;    
 };
 ///@brief Class for Stepper Motor Driver
 class MeStepperMotor: public MeWire
@@ -830,31 +820,37 @@ class MeTemperature:public MePort{
 #define  BRIGHT_TYPICAL 2
 #define  BRIGHTEST      7
 
-class MeDigitalTube:public MePort
+class MeNumericDisplay:public MePort
 {
   public:
     uint8_t Cmd_SetData;
     uint8_t Cmd_SetAddr;
     uint8_t Cmd_DispCtrl;
     boolean _PointFlag;     //_PointFlag=1:the clock point on
-    MeDigitalTube();
-	MeDigitalTube(uint8_t port);
-	void reset(uint8_t port);
+    MeNumericDisplay();
+	MeNumericDisplay(uint8_t port);
     void init(void);        //To clear the display
-    void writeByte(int8_t wr_data);//write 8bit data to tm1637
-    void start(void);//send start bits
-    void stop(void); //send stop bits
+    void set(uint8_t = BRIGHT_TYPICAL,uint8_t = 0x40,uint8_t = 0xc0);//To take effect the next time it displays.
+	void reset(uint8_t port);
     void display(float value);
     void display(int8_t DispData[]);
     void display(uint8_t BitAddr,int8_t DispData);
     void clearDisplay(void);
-    void set(uint8_t = BRIGHT_TYPICAL,uint8_t = 0x40,uint8_t = 0xc0);//To take effect the next time it displays.
+  private:
+    void writeByte(int8_t wr_data);//write 8bit data to tm1637
+    void start(void);//send start bits
+    void stop(void); //send stop bits
     void point(boolean PointFlag);//whether to light the clock point ":".To take effect the next time it displays.
     void coding(int8_t DispData[]); 
     int8_t coding(int8_t DispData); 
-  private:
   	int checkNum(float v,int b);
     uint8_t Clkpin;
     uint8_t Datapin;
+};
+class MePotentiometer:public MePort{
+public:
+	MePotentiometer();
+	MePotentiometer(uint8_t port);
+	uint16_t read();
 };
 #endif

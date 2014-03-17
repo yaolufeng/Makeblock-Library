@@ -2,10 +2,15 @@
 #include <Wire.h>
 #include <SoftwareSerial.h>
 
-MeDigitalTube tube(PORT_6);
+MeNumericDisplay disp(PORT_6);
+int i=0;
 void setup() {
-  tube.display(87.16);
+  
 }
 void loop() {
+	if(i>100){
+		i=0;
+	}
+	disp.display(i++);
 }
 

@@ -2,11 +2,11 @@
 #include <Wire.h>
 #include <SoftwareSerial.h>
 
-MeDigitalTube tube(PORT_6);
+MeNumericDisplay disp(PORT_6);
 void setup()
 {
-  tube.init();
-  tube.set(BRIGHT_TYPICAL);//BRIGHT_TYPICAL = 2,BRIGHT_DARKEST = 0,BRIGHTEST = 7;
+  disp.init();
+  disp.set(BRIGHT_TYPICAL);//BRIGHT_TYPICAL = 2,BRIGHT_DARKEST = 0,BRIGHTEST = 7;
 }
 void loop()
 {
@@ -26,10 +26,10 @@ void loop()
       i ++;
       if(i == sizeof(NumTab)) i = 0;
     }
-    tube.display(0,ListDisp[0]);
-    tube.display(1,ListDisp[1]); 
-    tube.display(2,ListDisp[2]);
-    tube.display(3,ListDisp[3]);
+    disp.display(0,ListDisp[0]);
+    disp.display(1,ListDisp[1]); 
+    disp.display(2,ListDisp[2]);
+    disp.display(3,ListDisp[3]);
     delay(300);
   }
 }

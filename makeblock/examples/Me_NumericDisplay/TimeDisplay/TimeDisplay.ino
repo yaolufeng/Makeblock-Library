@@ -8,12 +8,12 @@ unsigned char minute = 0;
 unsigned char hour = 12;
 long lastTime = 0;
 
-MeDigitalTube tube(PORT_6);
+MeNumericDisplay disp(PORT_6);
 
 void setup()
 {
-  tube.set();
-  tube.init();
+  disp.set();
+  disp.init();
 }
 void loop()
 {
@@ -22,7 +22,7 @@ void loop()
     if(Update == ON)
     {
       TimeUpdate();
-      tube.display(TimeDisp);
+      disp.display(TimeDisp);
     }
     lastTime = millis();
   }
