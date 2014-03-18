@@ -1,4 +1,4 @@
-///@file Makeblock.h head file of Makeblock Library V2.1.0317
+///@file Makeblock.h head file of Makeblock Library V2.1.0318
 ///Define the interface of Makeblock Library
 
 //#include <inttypes.h>
@@ -488,6 +488,7 @@ private:
 class MeEncoderMotor: public MeWire{
     public:
         MeEncoderMotor(uint8_t selector,uint8_t slot);
+        void begin();
         boolean setCounter(uint8_t counter);
         boolean setRatio(float ratio);
         boolean setPID(float mp,float mi,float md,uint8_t mode);

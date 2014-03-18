@@ -982,6 +982,10 @@ MeRGBLed::~MeRGBLed() {
 MeEncoderMotor::MeEncoderMotor(uint8_t selector,uint8_t slot):MeWire(selector){
     _slot = slot;
 }
+void MeEncoderMotor::begin(){
+	MeWire::begin();
+	resetEncoder();
+}
 boolean MeEncoderMotor::setCounter(uint8_t counter){
     byte w[5]={0};
     byte r[4]={0};
