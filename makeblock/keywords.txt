@@ -23,7 +23,11 @@ Me4Button	KEYWORD1
 MeJoystick	KEYWORD1
 MeLightSensor	KEYWORD1
 MeSoundSensor	KEYWORD1
-
+MePotentiometer	KEYWORD1
+MeNumericDisplay	KEYWORD1
+MeTemperature	KEYWORD1
+MeRGBLed	KEYWORD1
+MePIRMotion	KEYWORD1
 #######################################
 # Methods and Functions (KEYWORD2)
 #######################################
@@ -108,6 +112,8 @@ strength	KEYWORD2
 Dread	KEYWORD2
 Aread	KEYWORD2
 temperature	KEYWORD2
+setColorAt	KEYWORD2
+getColorAt	KEYWORD2
 #######################################
 # Constants (LITERAL1)
 #######################################
