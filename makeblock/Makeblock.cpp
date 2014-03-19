@@ -1507,7 +1507,7 @@ static void initISR(timer16_Sequence_t timer)
         TCCR4B = _BV(CS41);     // set prescaler of 8
         TCNT4 = 0;              // clear the timer count
         TIFR4 = _BV(OCF4A);     // clear any pending interrupts;
-        TIMSKEY4 =  _BV(OCIE4A) ; // enable the output compare interrupt
+        TIMSK4 =  _BV(OCIE4A) ; // enable the output compare interrupt
     }
 #endif
 
