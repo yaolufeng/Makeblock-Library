@@ -1,4 +1,4 @@
-///@file Makeblock.h head file of Makeblock Library V2.1.0319
+///@file Makeblock.h head file of Makeblock Library V2.1.0327
 ///Define the interface of Makeblock Library
 
 //#include <inttypes.h>
@@ -472,7 +472,7 @@ public:
 	uint8_t getNumber();
 	cRGB getColorAt(uint8_t index);
 	bool setColorAt(uint8_t index, uint8_t red,uint8_t green,uint8_t blue);
-	void sync();
+	void show();
 	
 private:
 	uint16_t count_led;

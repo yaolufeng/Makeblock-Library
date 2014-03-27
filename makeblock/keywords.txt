@@ -60,6 +60,7 @@ touched	KEYWORD2
 begin	KEYWORD2
 end	KEYWORD2
 read	KEYWORD2
+show	KEYWORD2
 available	KEYWORD2
 overflow	KEYWORD2
 flush	KEYWORD2

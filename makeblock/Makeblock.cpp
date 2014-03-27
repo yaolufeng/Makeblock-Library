@@ -967,7 +967,7 @@ w_nop16
   
   SREG=sreg_prev;
 }
-void MeRGBLed::sync() {
+void MeRGBLed::show() {
 	*ws2812_port_reg |= pinMask; // Enable DDR
 	rgbled_sendarray_mask(pixels,3*count_led,pinMask,(uint8_t*) ws2812_port,(uint8_t*) ws2812_port_reg );	
 }
