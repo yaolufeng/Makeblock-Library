@@ -250,6 +250,13 @@ void loop() {
          pins[i].slot[0] = 0;
          pins[i].slot[1] = 0;
       }
+      motor.reset(M1);
+      motor.stop();
+      motor.reset(M2);
+      motor.stop();
+      motor.reset(PORT_1);
+      motor.stop();
+      motor.reset(PORT_2);
       motor.stop();
       return;
     }
