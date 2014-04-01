@@ -1,4 +1,4 @@
-///@file Makeblock.h head file of Makeblock Library V2.1.0327
+///@file Makeblock.h head file of Makeblock Library V2.1.0401
 ///Define the interface of Makeblock Library
 
 //#include <inttypes.h>
@@ -466,6 +466,7 @@ class MeRGBLed:public MePort {
 public: 
 	MeRGBLed();
 	MeRGBLed(uint8_t port);
+	MeRGBLed(uint8_t port,uint8_t slot);
 	~MeRGBLed();
 	void reset(uint8_t port);
 	///@brief set the count of leds.

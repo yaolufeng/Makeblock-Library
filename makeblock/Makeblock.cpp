@@ -784,6 +784,18 @@ MeRGBLed::MeRGBLed(uint8_t port):MePort(port) {
 	ws2812_port_reg = portModeRegister(digitalPinToPort(s2));
 	setNumber(4);
 }
+MeRGBLed::MeRGBLed(uint8_t port,uint8_t slot):MePort(port){
+	if(slot==DEV1){
+		pinMask = digitalPinToBitMask(s2);
+		ws2812_port = portOutputRegister(digitalPinToPort(s2));
+		ws2812_port_reg = portModeRegister(digitalPinToPort(s2));
+	}else{
+		pinMask = digitalPinToBitMask(s1);
+		ws2812_port = portOutputRegister(digitalPinToPort(s1));
+		ws2812_port_reg = portModeRegister(digitalPinToPort(s1));
+	}
+	setNumber(4);
+}
 void MeRGBLed::reset(uint8_t port){
 	s2 = mePort[port].s2;
 	s1 = mePort[port].s1;
