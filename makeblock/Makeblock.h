@@ -18,7 +18,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-///@brief Struct of MePort_Sig
 typedef struct
 {
     uint8_t s1;
@@ -267,7 +266,7 @@ protected:
     uint8_t _port;
     uint8_t _slot;
 };
-///@brief Struct of MeParamObject
+
 typedef struct MeParamObject
 {
     char *name;
@@ -462,16 +461,22 @@ public:
     ///@brief check press state of button
     bool buttonState();
 };
+///@brief Class for RGB Led Module(http://www.makeblock.cc/me-rgb-led-v1-0/) and Led Strip(http://www.makeblock.cc/led-rgb-strip-addressable-sealed-1m/)
 class MeRGBLed:public MePort {
 public: 
 	MeRGBLed();
 	MeRGBLed(uint8_t port);
 	~MeRGBLed();
 	void reset(uint8_t port);
+	///@brief set the count of leds.
 	void setNumber(uint8_t num_led);
+	///@brief get the count of leds.
 	uint8_t getNumber();
+	///@brief get the rgb value of the led with the index.
 	cRGB getColorAt(uint8_t index);
+	///@brief set the rgb value of the led with the index.
 	bool setColorAt(uint8_t index, uint8_t red,uint8_t green,uint8_t blue);
+	///@brief become effective of all led's change.
 	void show();
 	
 private:
@@ -675,7 +680,7 @@ private:
 };
 
 
-/*Me4Button*/
+///@brief Class for Button Module
 class Me4Button: public MePort
 {
 public:
@@ -694,39 +699,42 @@ protected:
 
 };
 
-/*      Joystick        */
-
+///@brief Class for Joystick Module
 class MeJoystick : public MePort
 {
 public:
 	MeJoystick();
     MeJoystick(uint8_t port);
+	///@brief get the value of x-axis
     int readX();
+	///@brief get the value of y-axis
     int readY();
 	float angle();
 	float strength();
 };
-/*      Light Sensor         */
-
+///@brief Class for Light Sensor Module
 class MeLightSensor : public MePort
 {
 public:
 	MeLightSensor();
     MeLightSensor(uint8_t port);
+	///@brief get the value of light intensity
     int read();
+	///@brief turn on the led.
 	void lightOn();
+	///@brief turn off the led.
 	void lightOff();
     float strength();
 };
 
-/*      Light Sensor         */
-
+///@brief Class for Sound Sensor Module
 class MeSoundSensor : public MePort
 {
 public:
 	MeSoundSensor();
     MeSoundSensor(uint8_t port);
     bool Dread();
+	///@brief get the value of sound intensity
     int strength();
 };
 class OneWire
@@ -798,12 +806,14 @@ class OneWire
     // the same devices in the same order.
     uint8_t search(uint8_t *newAddr);
 };
+///@brief Class for temperature sensor
 class MeTemperature:public MePort{
 	public:
 		MeTemperature();
 		MeTemperature(uint8_t port);
 		MeTemperature(uint8_t port,uint8_t slot);
 		void reset(uint8_t port, uint8_t slot);
+		///@brief get the celsius of temperature
 		float temperature();
 	private:
 		OneWire _ts;		
@@ -820,14 +830,10 @@ class MeTemperature:public MePort{
 #define  BRIGHT_DARKEST 0
 #define  BRIGHT_TYPICAL 2
 #define  BRIGHTEST      7
-
+///@brief Class for numeric display module
 class MeNumericDisplay:public MePort
 {
   public:
-    uint8_t Cmd_SetData;
-    uint8_t Cmd_SetAddr;
-    uint8_t Cmd_DispCtrl;
-    boolean _PointFlag;     //_PointFlag=1:the clock point on
     MeNumericDisplay();
 	MeNumericDisplay(uint8_t port);
     void init(void);        //To clear the display
@@ -838,6 +844,10 @@ class MeNumericDisplay:public MePort
     void display(uint8_t BitAddr,int8_t DispData);
     void clearDisplay(void);
   private:
+    uint8_t Cmd_SetData;
+    uint8_t Cmd_SetAddr;
+    uint8_t Cmd_DispCtrl;
+    boolean _PointFlag;     //_PointFlag=1:the clock point on
     void writeByte(int8_t wr_data);//write 8bit data to tm1637
     void start(void);//send start bits
     void stop(void); //send stop bits
@@ -848,6 +858,7 @@ class MeNumericDisplay:public MePort
     uint8_t Clkpin;
     uint8_t Datapin;
 };
+///@brief Class for potentiometer
 class MePotentiometer:public MePort{
 public:
 	MePotentiometer();
