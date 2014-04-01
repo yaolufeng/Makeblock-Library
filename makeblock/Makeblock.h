@@ -97,72 +97,35 @@ struct cRGB { uint8_t g; uint8_t r; uint8_t b; };
 
 //stepper
 //address table
-#define STP_RUN_STATE 		0x91
-#define STP_SPEED_RL1 		0x92
-#define STP_SPEED_RL2 		0x93
-#define STP_SPEED_RH1 		0x94
-#define STP_SPEED_RH2 		0x95
-#define STP_DIS_TOGO_RL1 	0x96
-#define STP_DIS_TOGO_RL2 	0x97
-#define STP_DIS_TOGO_RH1 	0x98
-#define STP_DIS_TOGO_RH2 	0x99
-#define STP_TARGET_POS_RL1 	0x9A
-#define STP_TARGET_POS_RL2 	0x9B
-#define STP_TARGET_POS_RH1 	0x9C
-#define STP_TARGET_POS_RH2 	0x9D
-#define STP_CURRENT_POS_RL1 0x9E
-#define STP_CURRENT_POS_RL2 0x9F
-#define STP_CURRENT_POS_RH1 0xA0
-#define STP_CURRENT_POS_RH2 0xA1
+
+#define STEPPER_CMD   0x92
+
+#define SET_I2C_ADD   0x21
+#define STP_SET_MS    0x22
+#define STP_SET_SPEED 0x23
+#define STP_MAX_SPEED 0x24
+#define STP_SET_ACC   0x25
+#define STP_SET_POS   0x26
+#define STP_MOVE      0x31
+#define STP_MOVE_TO   0x32
+#define STP_ENABLE    0x41
+#define STP_DISABLE   0x42
+#define STP_RUN       0x43
+#define STP_RUN_ASTP  0x44
+#define STP_STOP      0x45
+#define STP_RUN_SPEED 0x46
+#define STP_RESET     0x47
 
 
-#define STP_ACC_L1 			0x01 //This is an expensive call since it requires a square root to be calculated. Don't call more ofthen than needed.
-#define STP_ACC_L2 			0x02
-#define STP_ACC_H1 			0x03
-#define STP_ACC_H2 			0x04
-#define STP_MAX_SPEED_L1 	0x05
-#define STP_MAX_SPEED_L2 	0x06
-#define STP_MAX_SPEED_H1 	0x07
-#define STP_MAX_SPEED_H2 	0x08
-#define STP_SPEED_L1 		0x09
-#define STP_SPEED_L2 		0x0A
-#define STP_SPEED_H1 		0x0B
-#define STP_SPEED_H2 		0x0C
-#define STP_MOVE_TO_L1 		0x0D
-#define STP_MOVE_TO_L2 		0x0E
-#define STP_MOVE_TO_H1 		0x0F
-#define STP_MOVE_TO_H2 		0x10
-#define STP_MOVE_L1 		0x11
-#define STP_MOVE_L2 		0x12
-#define STP_MOVE_H1 		0x13
-#define STP_MOVE_H2 		0x14
-#define STP_CURRENT_POS_L1 	0x15
-#define STP_CURRENT_POS_L2 	0x16
-#define STP_CURRENT_POS_H1 	0x17
-#define STP_CURRENT_POS_H2 	0x18
+#define GET_CURRENT_POS   0x51
+#define GET_GOAL_POS  0x52
+#define GET_CURRENT_DIS   0x53
 
-#define STP_RUN_CTRL 		0x1C
-#define STP_EN_CTRL 		0x1D
-#define STP_SLEEP_CTRL 		0x1F
-#define STP_MS_CTRL 		0x20
-#define LS_SET_ST_ADD 		0x21
-
-
-//data table
-#define STP_RUN 			0x01
-#define STP_STOP 			0x02
-#define STP_WAIT 			0x03
-#define STP_RESET_CTRL 		0x04
-#define STP_RUN_SPEED 		0x05
-#define STP_TRUE 			0x01
-#define STP_FALSE 			0x00
-#define STP_ENABLE 			0x01
-#define STP_DISABLE 		0x02
-#define STP_FULL 			0x01
-#define STP_HALF 			0x02
-#define STP_QUARTER 		0x04
-#define STP_EIGHTH 			0x08
-#define STP_SIXTEENTH 		0x16
+#define STP_FULL 0x01
+#define STP_HALF 0x02
+#define STP_QUARTER 0x04
+#define STP_EIGHTH 0x08
+#define STP_SIXTEENTH 0x16
 
 //NEC Code table
 #define IR_BUTTON_POWER 	0x45
@@ -516,14 +479,19 @@ class MeEncoderMotor: public MeWire{
 class MeStepperMotor: public MeWire
 {
 public:
+	
+
     ///@brief initialize,portNum can ONLY be PORT_1 or PORT_2
-    MeStepperMotor(uint8_t port, uint8_t selector);
+    MeStepperMotor(uint8_t port, uint8_t=1);
 
     ///@brief start stepper driver.
-    void begin(byte microStep = STP_SIXTEENTH, long speed = 10000, long acceleration = 5000);
+    void begin();
 
     ///@brief set micro step.
     ///@param microStep STP_FULL, STP_HALF, STP_QUARTER, STP_EIGHTH, STP_SIXTEENTH
+    uint8_t STP_I2C_communicate(byte mode,long data,byte rlen);
+	
+	//
     void setMicroStep(byte microStep);
 
     ///@brief stop stepper and reset current position to zero.
@@ -558,7 +526,9 @@ public:
 
     ///@brief The distance from the current position to the target position.
     ///@return the distance from the current position to the target position in steps.Positive is clockwise from the current position.
-    long distanceToGo();
+    void setI2Cadd(uint8_t slaveI2Cadd);
+
+	long distanceToGo();
 
     ///@brief The most recently set target position.
     ///@return the target position in steps. Positive is clockwise from the 0 position.
@@ -582,18 +552,38 @@ public:
     void run();
 
     ///@brief Sets a new target position that causes the stepper to stop as quickly as possible, using to the current speed and acceleration parameters.
-    void stop();
+    
+
+	void stop();
 
     ///@brief stop all dispose, keep the user setting data.
     void wait();
+	void onestep();
 
     bool readState();
-
+	
+	union perdata
+	{
+		 uint8_t c[7];
+		 struct 
+		 {
+		 	uint8_t cmd1;
+			uint8_t cmd2;
+			uint8_t dev;
+			long data;
+		 }motor;
+		 
+	}stepper;
+  uint8_t dir;
+  uint8_t pulse;
+	
 private:
     long stepperSpeedRead;
     long stepperDistanceToGoRead;
     long stepperTargetPositionRead;
     long stepperCurrentPositionRead;
+	
+	
 };
 
 #if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)

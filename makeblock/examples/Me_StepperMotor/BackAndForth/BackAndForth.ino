@@ -11,15 +11,17 @@
 * Copyright (C) 2013 Maker Works Technology Co., Ltd. All right reserved.
 * http://www.makeblock.cc/
 **************************************************************************/
-#include <Makeblock.h>
-#include <Arduino.h>
+#include "Makeblock.h"
 #include <SoftwareSerial.h>
 #include <Wire.h>
 
-MeStepperMotor stepperDriver(PORT_1,0x5);
+MeStepperMotor stepper(PORT_1,0x5);
 void initStepper(){
-  stepperDriver.begin(STP_SIXTEENTH,10000,10000); // initialize stepper driver.
-  stepperDriver.run(); // output pulse
+  stepper.begin(); // initialize stepper driver.
+  stepper.setMicroStep(STP_SIXTEENTH);
+  stepper.setMaxSpeed(10000);
+  stepper.setAcceleration(10000);
+  stepper.run(); // output pulse
   Serial.println("Stepper Begin");
 }
 
@@ -30,13 +32,10 @@ void setup()
 }
 void loop()
 {
-  if(!stepperDriver.isRunning()){
-    initStepper();
-  }
-  long stp = stepperDriver.currentPosition(); // get the current position
+  long stp = stepper.currentPosition(); // get the current position
  
   if(stp > 24000) // set the limit
-    stepperDriver.moveTo(0); // Set the target position. Negative is anticlockwise from the 0 position.
+    stepper.moveTo(0); // Set the target position. Negative is anticlockwise from the 0 position.
   if(stp < 1) // set the limit
-    stepperDriver.moveTo(24001); // set the target position.
+    stepper.moveTo(24001); // set the target position.
 }

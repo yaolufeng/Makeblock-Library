@@ -11,28 +11,26 @@
 * Copyright (C) 2013 Maker Works Technology Co., Ltd. All right reserved.
 * http://www.makeblock.cc/
 **************************************************************************/
-#include <Makeblock.h>
-#include <Arduino.h>
+#include "Makeblock.h"
 #include <SoftwareSerial.h>
 #include <Wire.h>
 
-MeStepperMotor stepperDriver(PORT_1);
+MeStepperMotor stepper(PORT_1,0x05);
 
 void setup()
 {
   Serial.begin(9600); 
-  stepperDriver.begin(); // initialize stepper driver.
-  stepperDriver.enable(); // enable stepper driver, Keep the micro step current position.
-  stepperDriver.setMicroStep(STP_QUARTER); // set micro step. STP_FULL, STP_HALF, STP_QUARTER, STP_EIGHTH, STP_SIXTEENTH
-  stepperDriver.setMaxSpeed(5000);         // set max speed. 1-10000
-  stepperDriver.setAcceleration(120000);   // set acceleration. 1-200000
-  stepperDriver.run(); // output pulse
+  stepper.begin(); // initialize stepper driver.
+  stepper.setMicroStep(STP_QUARTER); // set micro step. STP_FULL, STP_HALF, STP_QUARTER, STP_EIGHTH, STP_SIXTEENTH
+  stepper.setMaxSpeed(5000);         // set max speed. 1-10000
+  stepper.setAcceleration(120000);   // set acceleration. 1-200000
+  stepper.run(); // output pulse
 }
 
 void loop()
 {
   if (Serial.available())
-    stepperDriver.moveTo(Serial.read()*10);
+    stepper.moveTo(Serial.read()*10);
 
 }
 

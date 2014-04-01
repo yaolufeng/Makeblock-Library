@@ -193,7 +193,7 @@ void MeWire::request(byte* writeData,byte*readData,int wlen,int rlen)
 	Wire.write(writeData,wlen);
 
 	Wire.endTransmission(); 
-	
+	delayMicroseconds(2);
 	Wire.requestFrom(_slaveAddress,rlen); // request 6 bytes from slave device
 	delayMicroseconds(2);
 	while(Wire.available()) // slave may send less than requested
@@ -1193,146 +1193,145 @@ float MeEncoderMotor::getPIDParam(uint8_t type,uint8_t mode){
 
 MeStepperMotor::MeStepperMotor(uint8_t port, uint8_t selector): MeWire(port, selector)
 {
+	dir=s2;
+	pulse=s1;
+	pinMode(dir,OUTPUT);
+    pinMode(pulse,OUTPUT); 
+	digitalWrite(dir,LOW);
+	digitalWrite(pulse,LOW);
 }
 
-void MeStepperMotor::begin(byte microStep, long speed, long acceleration)
+
+
+void MeStepperMotor::begin()
 {
     MeWire::begin(); // join i2c bus (address optional for master)
-    delay(10);
+    delay(100);
     reset();
-	delay(10);
+	delay(100);
     setCurrentPosition(0);
+    delay(100);  
     enable();
-    delay(10);
-    setMicroStep(microStep);
-    delay(10);
-    setMaxSpeed(speed);
-    delay(10);
-    setAcceleration(acceleration);
+    delay(100);   
 }
+
+uint8_t MeStepperMotor::STP_I2C_communicate(byte mode,long data,byte rlen)
+{
+  stepper.motor.cmd1=STEPPER_CMD;
+  stepper.motor.cmd2=mode;
+  stepper.motor.dev=1;
+  stepper.motor.data=data;
+  byte* RPM;
+  RPM=(byte*)&stepper.c[0];
+  MeWire::request(RPM,RPM,7,rlen);
+  
+  //if((stepper.c[0]==STEPPER_CMD)&&(stepper.c[1]==mode)&&(stepper.c[2]==1))
+   if((stepper.c[0]==STEPPER_CMD)&&(stepper.c[1]==mode))
+      return 1;
+   
+   else
+      return 0;
+}
+
 
 void MeStepperMotor::setMicroStep(byte microStep)
 {
-    MeWire::write(STP_MS_CTRL, microStep);
+	
+	STP_I2C_communicate(STP_SET_MS, (long)microStep,3);
 }
+
 
 void MeStepperMotor::reset()
 {
-    MeWire::write(STP_RUN_CTRL, STP_RESET_CTRL);
+	STP_I2C_communicate(STP_RESET, 0,3);
+   
+}
+void MeStepperMotor::setMaxSpeed(long stepperMaxSpeed)
+{
+    STP_I2C_communicate(STP_MAX_SPEED,stepperMaxSpeed,3);
+
+}
+void MeStepperMotor::setAcceleration(long stepperAcceleration)
+{
+   STP_I2C_communicate(STP_SET_ACC, stepperAcceleration,3);
+    
+}
+void MeStepperMotor::setSpeed(long stepperSpeed)
+{
+    STP_I2C_communicate(STP_SET_SPEED, stepperSpeed,3);
+   
+}
+void MeStepperMotor::setCurrentPosition(long stepperCurrentPos)
+{
+    
+	STP_I2C_communicate(STP_SET_POS,stepperCurrentPos,3);
+   
+}
+void MeStepperMotor::setI2Cadd(uint8_t slaveI2Cadd)
+{
+    
+	STP_I2C_communicate(SET_I2C_ADD,(long)slaveI2Cadd,3);
+   
 }
 
 void MeStepperMotor::moveTo(long stepperMoveTo)
 {
-    MeWire::write(STP_MOVE_TO_L1, *((char *)(&stepperMoveTo)));
-    MeWire::write(STP_MOVE_TO_L2, *((char *)(&stepperMoveTo) + 1));
-    MeWire::write(STP_MOVE_TO_H1, *((char *)(&stepperMoveTo) + 2));
-    MeWire::write(STP_MOVE_TO_H2, *((char *)(&stepperMoveTo) + 3));
+   STP_I2C_communicate(STP_MOVE_TO, stepperMoveTo,3);
+    
 }
 
 void MeStepperMotor::move(long stepperMove)
 {
-    MeWire::write(STP_MOVE_L1, *((char *)(&stepperMove)));
-    MeWire::write(STP_MOVE_L2, *((char *)(&stepperMove) + 1));
-    MeWire::write(STP_MOVE_H1, *((char *)(&stepperMove) + 2));
-    MeWire::write(STP_MOVE_H2, *((char *)(&stepperMove) + 3));
-}
-
-void MeStepperMotor::runSpeed()
-{
-    MeWire::write(STP_RUN_CTRL, STP_RUN_SPEED);
-}
-
-void MeStepperMotor::setMaxSpeed(long stepperMaxSpeed)
-{
-    MeWire::write(STP_MAX_SPEED_L1, *((char *)(&stepperMaxSpeed)));
-    MeWire::write(STP_MAX_SPEED_L2, *((char *)(&stepperMaxSpeed) + 1));
-    MeWire::write(STP_MAX_SPEED_H1, *((char *)(&stepperMaxSpeed) + 2));
-    MeWire::write(STP_MAX_SPEED_H2, *((char *)(&stepperMaxSpeed) + 3));
-}
-
-void MeStepperMotor::setAcceleration(long stepperAcceleration)
-{
-    MeWire::write(STP_ACC_L1, *((char *)(&stepperAcceleration)));
-    MeWire::write(STP_ACC_L2, *((char *)(&stepperAcceleration) + 1));
-    MeWire::write(STP_ACC_H1, *((char *)(&stepperAcceleration) + 2));
-    MeWire::write(STP_ACC_H2, *((char *)(&stepperAcceleration) + 3));
-}
-
-void MeStepperMotor::setSpeed(long stepperSpeed)
-{
-    MeWire::write(STP_SPEED_L1, *((char *)(&stepperSpeed)));
-    MeWire::write(STP_SPEED_L2, *((char *)(&stepperSpeed) + 1));
-    MeWire::write(STP_SPEED_H1, *((char *)(&stepperSpeed) + 2));
-    MeWire::write(STP_SPEED_H2, *((char *)(&stepperSpeed) + 3));
-}
-
-long MeStepperMotor::speed()
-{
-    *((char *)(&stepperSpeedRead))     = MeWire::read(STP_SPEED_RL1);
-    *((char *)(&stepperSpeedRead) + 1) = MeWire::read(STP_SPEED_RL2);
-    *((char *)(&stepperSpeedRead) + 2) = MeWire::read(STP_SPEED_RH1);
-    *((char *)(&stepperSpeedRead) + 3) = MeWire::read(STP_SPEED_RH2);
-    return stepperSpeedRead;
+    STP_I2C_communicate(STP_MOVE, stepperMove,3);
+   
 }
 
 long MeStepperMotor::distanceToGo()
 {
-    *((char *)(&stepperDistanceToGoRead))     = MeWire::read(STP_DIS_TOGO_RL1);
-    *((char *)(&stepperDistanceToGoRead) + 1) = MeWire::read(STP_DIS_TOGO_RL2);
-    *((char *)(&stepperDistanceToGoRead) + 2) = MeWire::read(STP_DIS_TOGO_RH1);
-    *((char *)(&stepperDistanceToGoRead) + 3) = MeWire::read(STP_DIS_TOGO_RH2);
-    return stepperDistanceToGoRead;
+     STP_I2C_communicate(GET_CURRENT_DIS,0,7);
+
+    return (stepper.motor.data);
 }
 
 long MeStepperMotor::targetPosition()
 {
-    *((char *)(&stepperTargetPositionRead))     = MeWire::read(STP_TARGET_POS_RL1);
-    *((char *)(&stepperTargetPositionRead) + 1) = MeWire::read(STP_TARGET_POS_RL2);
-    *((char *)(&stepperTargetPositionRead) + 2) = MeWire::read(STP_TARGET_POS_RH1);
-    *((char *)(&stepperTargetPositionRead) + 3) = MeWire::read(STP_TARGET_POS_RH2);
-    return stepperTargetPositionRead;
+     STP_I2C_communicate(GET_GOAL_POS,0,7);
+    return (stepper.motor.data);
 }
-
 long MeStepperMotor::currentPosition()
 {
-    *((char *)(&stepperCurrentPositionRead))     = MeWire::read(STP_CURRENT_POS_RL1);
-    *((char *)(&stepperCurrentPositionRead) + 1) = MeWire::read(STP_CURRENT_POS_RL2);
-    *((char *)(&stepperCurrentPositionRead) + 2) = MeWire::read(STP_CURRENT_POS_RH1);
-    *((char *)(&stepperCurrentPositionRead) + 3) = MeWire::read(STP_CURRENT_POS_RH2);
-    return stepperCurrentPositionRead;
-}
-
-void MeStepperMotor::setCurrentPosition(long stepperCurrentPos)
-{
-    MeWire::write(STP_CURRENT_POS_L1, *((char *)(&stepperCurrentPos)));
-    MeWire::write(STP_CURRENT_POS_L2, *((char *)(&stepperCurrentPos) + 1));
-    MeWire::write(STP_CURRENT_POS_H1, *((char *)(&stepperCurrentPos) + 2));
-    MeWire::write(STP_CURRENT_POS_H2, *((char *)(&stepperCurrentPos) + 3));
+    STP_I2C_communicate(GET_CURRENT_POS,0,7);
+    
+    return (stepper.motor.data);
 }
 
 void MeStepperMotor::enable()
 {
-    MeWire::write(STP_EN_CTRL, STP_ENABLE);
+    STP_I2C_communicate(STP_ENABLE,0,3);
 }
 
 void MeStepperMotor::disable()
 {
-    MeWire::write(STP_EN_CTRL, STP_DISABLE);
+    STP_I2C_communicate(STP_DISABLE,0,3);
 }
 
 void MeStepperMotor::run()
 {
-    MeWire::write(STP_RUN_CTRL, STP_RUN);
+   STP_I2C_communicate(STP_RUN,0,3);
+}
+
+void MeStepperMotor::runSpeed()
+{
+   STP_I2C_communicate(STP_RUN_SPEED,0,3);
 }
 
 void MeStepperMotor::stop()
 {
-    MeWire::write(STP_RUN_CTRL, STP_STOP);
+    STP_I2C_communicate(STP_STOP,0,3);
 }
-
-void MeStepperMotor::wait()
+void MeStepperMotor::onestep()
 {
-    MeWire::write(STP_RUN_CTRL, STP_WAIT);
+    STP_I2C_communicate(STP_RUN_ASTP,0,3);
 }
 
 /*servo*/
