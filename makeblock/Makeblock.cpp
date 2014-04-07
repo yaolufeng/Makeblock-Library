@@ -2235,7 +2235,7 @@ void MeNumericDisplay::writeByte(int8_t wr_data)
      digitalWrite(Datapin,LOW);
      count1 =0;
     }
-    pinMode(Datapin,INPUT);
+    //pinMode(Datapin,INPUT);
   }
   pinMode(Datapin,OUTPUT);
   
