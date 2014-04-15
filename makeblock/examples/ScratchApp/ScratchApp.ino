@@ -2,8 +2,8 @@
 * File Name          : ScratchApp.ino
 * Author             : Ander
 * Updated            : Ander
-* Version            : V1.0.0
-* Date               : 03/19/2014
+* Version            : V1.0.1
+* Date               : 04/15/2014
 * Description        : Makeblock Electronic for  Scratch's Communication
 * License            : CC-BY-SA 3.0
 * Copyright (C) 2014 Maker Works Technology Co., Ltd. All right reserved.
@@ -139,7 +139,14 @@ void checkDevice(){
           int dist = joystick.readX();
           serial.print("Joystick/Port");
           serial.print(portNum);
-          serial.print(ports[i].slot[0]==1?"/X-Axis":"/Y-Axis");
+          serial.print("/X-Axis");
+          serial.print(" ");
+          serial.println(dist);
+          delay(60);
+          dist = joystick.readY();
+          serial.print("Joystick/Port");
+          serial.print(portNum);
+          serial.print("/Y-Axis");
           serial.print(" ");
           serial.println(dist);
         }
