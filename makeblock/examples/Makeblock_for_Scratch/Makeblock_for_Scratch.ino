@@ -14,6 +14,7 @@
 #include <Wire.h>
 MeSerial serial;
 MeDCMotor motor;
+MeGyro gyro;
 MeServo servo;
 MeUltrasonicSensor ultrasonic;
 MeLineFinder linefinder;
@@ -171,6 +172,28 @@ void checkDevice(){
      isServoRun = false;
      servo.detach(); 
   }
+  gyro.update();
+  double ax = gyro.angleX();
+  if(ax!=0){
+    serial.print("Gyro/Port0/X-Axis");
+    serial.print(" ");
+    serial.println(gyro.angleX());
+    delay(60);
+  }
+  double ay = gyro.angleY();
+  if(ay!=0){
+    serial.print("Gyro/Port0/Y-Axis");
+    serial.print(" ");
+    serial.println(gyro.angleY());
+    delay(60);
+  }
+  double az = gyro.angleZ();
+  if(az!=0){
+    serial.print("Gyro/Port0/Z-Axis");
+    serial.print(" ");
+    serial.println(gyro.angleZ());
+    delay(60);
+  }
 }
 void sendCommand(const char*cmd,int cPort,int cSlot,double v){
   sendCommand(cmd,cPort,cSlot,v,false);
@@ -229,14 +252,16 @@ long baudrate = 115200;
 void setup() {
   serial.begin(baudrate);
   serial.println("Application Start");
+  gyro.begin();
 }
 void loop() {
+  
   long time = millis()-currentTime;
+  
   if(time>sampleTime||time<0){
     currentTime = millis();
     checkDevice();
   }
-  
   if(serial.paramAvailable()){
     device = serial.getParamCode("device");
     port = serial.getParamValue("port");

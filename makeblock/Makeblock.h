@@ -1,4 +1,4 @@
-///@file Makeblock.h head file of Makeblock Library V2.1.0407
+///@file Makeblock.h head file of Makeblock Library V2.1.0416
 ///Define the interface of Makeblock Library
 
 //#include <inttypes.h>
@@ -440,6 +440,7 @@ public:
 	cRGB getColorAt(uint8_t index);
 	///@brief set the rgb value of the led with the index.
 	bool setColorAt(uint8_t index, uint8_t red,uint8_t green,uint8_t blue);
+	bool setColorAt(uint8_t index, long value);
 	///@brief become effective of all led's change.
 	void show();
 	
@@ -855,5 +856,28 @@ public:
 	MePotentiometer();
 	MePotentiometer(uint8_t port);
 	uint16_t read();
+};
+///@brief Class for gyro sensor
+class MeGyro{
+	public:
+		MeGyro();
+		void begin();
+		void update();
+		double angleX();
+		double angleY();
+		double angleZ();
+	private:
+		void calibrate();
+		int readData(int start, uint8_t *buffer, int size);
+		int writeData(int start, const uint8_t *pData, int size);
+		int writeReg(int reg, uint8_t data);
+		
+		double gSensitivity; // for 500 deg/s, check data sheet
+		double gx, gy, gz;
+		double gyrX, gyrY, gyrZ;
+		int16_t accX, accY, accZ;
+		double gyrXoffs, gyrYoffs, gyrZoffs;
+		double FREQ;
+		uint8_t i2cData[14];
 };
 #endif
