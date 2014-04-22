@@ -28,6 +28,7 @@ MeNumericDisplay	KEYWORD1
 MeTemperature	KEYWORD1
 MeRGBLed	KEYWORD1
 MePIRMotion	KEYWORD1
+MeGyro	KEYWORD1
 #######################################
 # Methods and Functions (KEYWORD2)
 #######################################
@@ -109,6 +110,9 @@ released	KEYWORD2
 readX	KEYWORD2
 readY	KEYWORD2
 angle	KEYWORD2
+angleX	KEYWORD2
+angleY	KEYWORD2
+angleZ	KEYWORD2
 strength	KEYWORD2
 Dread	KEYWORD2
 Aread	KEYWORD2

@@ -14,26 +14,30 @@
 #include <Wire.h>
 MeSerial serial;
 MeDCMotor motor;
-MeServo servo;
+MeGyro gyro;
+//MeServo servo;
 MeUltrasonicSensor ultrasonic;
-MeLineFinder linefinder;
-MeLimitSwitch limitswitch;
+//MeLineFinder linefinder;
+//MeLimitSwitch limitswitch;
 MeJoystick joystick;
-MeSoundSensor soundsensor;
+//MeSoundSensor soundsensor;
 MeLightSensor lightsensor;
-Me4Button button;
+//Me4Button button;
 MeTemperature temperature;
+MeRGBLed led;
+MePotentiometer potentiometer;
 char *device;
 char *method;
 int port;
 char *pin;
-int value;
+long value;
 int slot;
 int ultrasonic_port=-1;
 int switch_port=-1;
 int switch_slot=1;
 long servoTime = 0;
 bool isServoRun = false;
+unsigned long gyroTime[3]={0,0,0};
 typedef struct{
   int type;
   int mode;
@@ -68,6 +72,8 @@ void addDevice(){
       ports[index].type=9;
     }else if(strcmp(device,"Button")==0){
       ports[index].type=10;
+    }else if(strcmp(device,"Potentiometer")==0){
+      ports[index].type=11;
     }
   }
 }
@@ -79,11 +85,21 @@ void runDevice(){
       motor.reset(port);
       motor.run(value);
     }else if(strcmp(device,"servo")==0){
-      servo.reset(port,slot);
-      servo.begin();
-      servo.write(value);
+//      servo.reset(port,slot);
+//      servo.begin();
+//      servo.write(value);
       isServoRun = true;
       servoTime = millis();
+    }else if(strcmp(device,"led")==0){
+      led.reset(port);
+      if(slot==0){
+       for(int i=0;i<led.getNumber();i++){
+        led.setColorAt(i,value);
+       } 
+      }else{
+        led.setColorAt(slot-1,value);
+      }
+      led.show();
     }
   }
 }
@@ -100,15 +116,15 @@ void checkDevice(){
         }
         break;
         case 4:{
-          linefinder.reset(portNum);
-          int state = linefinder.readSensors();
-          sendCommand("LineFinder/Port",portNum,-1,state);
+//          linefinder.reset(portNum);
+//          int state = linefinder.readSensors();
+//          sendCommand("LineFinder/Port",portNum,-1,state);
         }
         break;
         case 5:{
-          limitswitch.reset(portNum,ports[i].slot[0]==1?1:2);
-          int touched = limitswitch.touched();
-          sendCommand("LimitSwitch/Port",portNum,ports[i].slot[0]==1?1:2,touched==0,true);
+//          limitswitch.reset(portNum,ports[i].slot[0]==1?1:2);
+//          int touched = limitswitch.touched();
+//          sendCommand("LimitSwitch/Port",portNum,ports[i].slot[0]==1?1:2,touched==0,true);
         }
         break;
         case 6:{
@@ -118,9 +134,9 @@ void checkDevice(){
         }
         break;
         case 7:{
-          soundsensor.reset(portNum);
-          int sound = soundsensor.strength();
-          sendCommand("SoundSensor/Port",portNum,-1,sound);
+//          soundsensor.reset(portNum);
+//          int sound = soundsensor.strength();
+//          sendCommand("SoundSensor/Port",portNum,-1,sound);
         }
         break;
         case 8:{
@@ -152,9 +168,14 @@ void checkDevice(){
         }
         break;
         case 10:{
-          button.reset(portNum);
-          int state = button.pressed();
-          sendCommand("Button/Port",portNum,-1,state);
+//          button.reset(portNum);
+//          int state = button.pressed();
+//          sendCommand("Button/Port",portNum,-1,state);
+        }
+        break;
+        case 11:{
+          potentiometer.reset(portNum);
+          sendCommand("Potentiometer/Port",portNum,-1,potentiometer.read());
         }
         break;
       }
@@ -169,7 +190,33 @@ void checkDevice(){
   }
   if(isServoRun&&millis()-servoTime>500){
      isServoRun = false;
-     servo.detach(); 
+//     servo.detach(); 
+  }
+  if(millis()-gyroTime[0]>150){
+    gyro.update();
+    double ax = gyro.angleX();
+    if(ax!=0){
+      serial.print("Gyro/Port0/X-Axis");
+      serial.print(" ");
+      serial.println(gyro.angleX());
+      gyroTime[0]=millis();
+    }
+  }else if(millis()-gyroTime[1]>120){
+    double ay = gyro.angleY();
+    if(ay!=0){
+        serial.print("Gyro/Port0/Y-Axis");
+        serial.print(" ");
+        serial.println(gyro.angleY());
+        gyroTime[1]=millis();
+      }
+  }else if(millis()-gyroTime[2]>100){
+    double az = gyro.angleZ();
+    if(az!=0){
+        serial.print("Gyro/Port0/Z-Axis");
+        serial.print(" ");
+        serial.println(gyro.angleZ());
+        gyroTime[2]=millis();
+      }
   }
 }
 void sendCommand(const char*cmd,int cPort,int cSlot,double v){
@@ -222,21 +269,28 @@ void pinWrite(){
     digitalWrite(analogPins[atoi(pin)],value==2?HIGH:LOW);
   }
 }
-
+void callResponse(){
+  Serial.println("v1.0.0421"); 
+}
 long currentTime = 0;
 long sampleTime = 100;
 long baudrate = 115200;
+byte responseTime=0;
 void setup() {
   serial.begin(baudrate);
   serial.println("Application Start");
+  buzzerOn();
+  delay(100);
+  buzzerOff();
+  gyro.begin();
 }
 void loop() {
   long time = millis()-currentTime;
-  if(time>sampleTime||time<0){
-    currentTime = millis();
-    checkDevice();
-  }
   
+    if(time>sampleTime||time<0){
+      currentTime = millis();
+      checkDevice();
+    }
   if(serial.paramAvailable()){
     device = serial.getParamCode("device");
     port = serial.getParamValue("port");
@@ -244,7 +298,6 @@ void loop() {
     value = serial.getParamValue("value");
     slot = serial.getParamValue("slot");
     method = serial.getParamCode("method");
-    
     if(strcmp(device,"reset")==0){
       int i;
       for(i=0;i<10;i++){
@@ -267,6 +320,10 @@ void loop() {
       motor.stop();
       return;
     }
+    if(strcmp(device,"ver")==0){
+      callResponse();
+      return;
+    }
     if(strcmp(method,"add")==0){
      addDevice(); 
      return;
@@ -280,5 +337,6 @@ void loop() {
      pinWrite(); 
      return;
     }
+  }else{
   }
 }
