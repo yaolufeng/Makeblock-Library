@@ -1,9 +1,6 @@
+[![alt text](http://cdn1.bigcommerce.com/server2600/4r4weyxd/product_images/logo_final_thumb.jpg "Makeblock Logo") Library v2.1.0422](https://www.Makeblock.cc)
 
-![alt text](http://cdn1.bigcommerce.com/server2600/4r4weyxd/product_images/logo_final_thumb.jpg "Makeblock Logo") Library v2.1.0422
-
-[Buy our products at www.Makeblock.cc](https://www.Makeblock.cc)
-
-Library for Makeblock electronic modules
+Arduino library for Makeblock electronic modules
 
 > This library replace the Me_Lib_V2.0, this new library is rebuild and improved, we recommend all Makeblock customers to use this one.
 
@@ -40,6 +37,13 @@ How to use:
 
 4. Click "File->Examples". Here are some test program.
 
-5. For information on installing libraries, see: http://arduino.cc/en/Guide/Libraries
+5. For information on installing libraries, check the [official arduino docs](http://arduino.cc/en/Guide/Libraries)
 
 For more infomation on using Makeblock electronic modules, please visit our wiki (http://wiki.makeblock.cc)
+
+[Buy our products at www.Makeblock.cc](https://www.Makeblock.cc)
+
+[![alt text](http://cdn1.bigcommerce.com/server2600/4r4weyxd/product_images/theme_images/2__04402.jpg?t=1395321705 "New Products")](http://www.makeblock.cc/starter-robot-kit-v2-0-blue-with-electronics/)
+
+[![alt text](http://cdn1.bigcommerce.com/server2600/4r4weyxd/product_images/theme_images/1.jpg?t=1395321705 "New Products")](https://www.makeblock.cc/me-baseboard-v1-0/)
+
