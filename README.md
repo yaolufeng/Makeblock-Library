@@ -1,4 +1,4 @@
-[![alt text](http://cdn1.bigcommerce.com/server2600/4r4weyxd/product_images/logo_final_thumb.jpg "Makeblock Logo") Library v2.1.0422](https://www.Makeblock.cc)
+[![alt text](images/logo.png "Makeblock Logo") Library v2.1.0422](https://www.Makeblock.cc)
 
 Arduino library for Makeblock electronic modules
 
