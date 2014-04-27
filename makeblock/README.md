@@ -1,7 +1,8 @@
-[![alt text](../images/Logo.png "Makeblock Logo") Modules Examples](https://www.Makeblock.cc)
+##Modules Examples
 
 
-##Makeblock Robot Starter Kit
+###Makeblock Robot Starter Kit
+
 
 [![alt text](../images/Starter.png "")](http://www.makeblock.cc/starter-robot-kit-v2-0-blue-with-electronics/)
 
@@ -11,7 +12,7 @@
 * [Dual Mode](https://github.com/Makeblock-official/Makeblock-Library/blob/master/makeblock/examples/Makeblock_Robot_Starter_Kit/DualMode_Starter/DualMode_Starter.ino)
 
 
-##Ultrasonic Module
+###Ultrasonic Module
 
 [![alt text](../images/Ultrasonic.png "")](https://www.makeblock.cc/me-ultrasonic-sensor-v2-0/)
 
