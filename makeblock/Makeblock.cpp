@@ -10,7 +10,7 @@ MePort_Sig mePort[11] = {{NC, NC}, {11, A8}, {13, A11}, {A10, A9}, {1, 0},
 };
 #else // else ATmega328
 MePort_Sig mePort[11] = {{NC, NC}, {11, 10}, {3, 9}, {12, 13}, {8, 2},
-    {NC, NC}, {A2, A3}, {NC, A1}, {NC, A0}, {6, 7}, {5, 4}
+    {NC, NC}, {A2, A3}, {A6, A1}, {A7, A0}, {6, 7}, {5, 4}
 };
 
 #endif
@@ -60,7 +60,7 @@ uint8_t MePort::getPort(){
 uint8_t MePort::getSlot(){
 	return _slot;
 }
-bool MePort::Dread1()
+bool MePort::dRead1()
 {
     bool val;
     pinMode(s1, INPUT);
@@ -68,7 +68,7 @@ bool MePort::Dread1()
     return val;
 }
 
-bool MePort::Dread2()
+bool MePort::dRead2()
 {
     bool val;
 	pinMode(s2, INPUT);
@@ -76,40 +76,46 @@ bool MePort::Dread2()
     return val;
 }
 
-void MePort::Dwrite1(bool value)
+void MePort::dWrite1(bool value)
 {
     pinMode(s1, OUTPUT);
     digitalWrite(s1, value);
 }
 
-void MePort::Dwrite2(bool value)
+void MePort::dWrite2(bool value)
 {
     pinMode(s2, OUTPUT);
     digitalWrite(s2, value);
 }
 
-int MePort::Aread1()
+int MePort::aRead1()
 {
     int val;
     val = analogRead(s1);
     return val;
 }
 
-int MePort::Aread2()
+int MePort::aRead2()
 {
     int val;
     val = analogRead(s2);
     return val;
 }
 
-void MePort::Awrite1(int value)
+void MePort::aWrite1(int value)
 {   
     analogWrite(s1, value);  
 }
 
-void MePort::Awrite2(int value)
+void MePort::aWrite2(int value)
 {
     analogWrite(s2, value); 
+}
+uint8_t MePort::pin1(){
+	return s1;
+}
+uint8_t MePort::pin2(){
+	return s2;
 }
 void MePort::reset(uint8_t port){
 	s1 = mePort[port].s1;
@@ -204,225 +210,7 @@ void MeWire::request(byte* writeData,byte*readData,int wlen,int rlen)
 		index++; 
 	}
 }
-/*      MeParams       */
-MeParams::MeParams()
-{
-    _root = createObject();
-    memset(_root->child, 0, sizeof(MeParamObject));
-}
-void MeParams::parse(char* s){
-	clear();
-  char *p=NULL;
-  char *v=NULL;
-  p = (char*)malloc(20*sizeof(char));
-  v = (char*)malloc(40*sizeof(char));
-  int i;
-  int len = strlen(s);
-  int pIndex = 0;
-  int vIndex = 0;
-  bool pEnd = false;
-  bool vEnd = true;
-  for(i=0;i<len;i++){
-    if(s[i]=='&'){
-      pEnd = false;
-      vEnd = true;
-      setParam(p,v);
-      memset(p,0,20);
-      memset(v,0,40);
-      pIndex = i+1;
-    }
-    if(s[i]=='='){
-      pEnd=true;
-      vEnd = false;
-      vIndex = i+1;
-    }
-    if(vEnd==false){
-      if(i-vIndex>=0){
-        v[i-vIndex]=s[i];
-      } 
-    }
-    if(pEnd==false){
-      if(i-pIndex>=0){
-       p[i-pIndex]=s[i];
-      }
-    }
-  }
-  setParam(p,v);
-  memset(p,0,20);
-  memset(v,0,40);
-  free(p);
-  free(v);
-}
-MeParamObject *MeParams::getParam(const char *string)
-{
-    MeParamObject *c = _root->child;
-    while (c && strcasecmp(c->name, string))
-        c = c->next;
-    return c;
-}
-void MeParams::setParam(char *name, char *n)
-{
-	bool isStr = true;
-	double v = atof(n);	
-	isStr = v==0;
-	int i=0;
-	int len = strlen(n);
-	for(i=0;i<len;i++){
-		if(i==0){
-			if(n[i]==43||n[i]==45){
-				continue;
-			}
-		}
-		if(n[i]==46){
-			continue;
-		}
-		if(!(n[i]>=48&&n[i]<=57)){
-			isStr = true;	
-			break;
-		}
-	}
-    deleteParam(name);
-    if(isStr) {
-        addItemToObject(name, createCharItem(n));
-    } else {
-        addItemToObject(name, createItem(v));
-    }
-}
-double MeParams::getParamValue(const char *string)
-{
-    return getParam(string)->value;
-}
-char *MeParams::getParamCode(const char *string)
-{
-    return getParam(string)->code;
-}
-void MeParams::clear()
-{
-    unsigned char i = 0;
-    MeParamObject *c = _root->child;
-    MeParamObject *prev;
-    while (c){
-		prev = c;
-    	c = c->next;
-    }
-    c = prev;
-    while(prev){
-    	c = prev->prev;
-		deleteParam(prev->name);
-    	prev = c;
-    }
 
-}
-void MeParams::deleteParam(char *string)
-{	
-    deleteItemFromRoot(detachItemFromObject(string));
-}
-MeParamObject *MeParams::createObject()
-{
-    MeParamObject *item = (MeParamObject *) malloc(sizeof(MeParamObject));
-    if (item) {
-        memset(item, 0, sizeof(MeParamObject));
-    }
-    return item;
-}
-MeParamObject *MeParams::createItem(double n)
-{
-    MeParamObject *item = (MeParamObject *) malloc(sizeof(MeParamObject));
-    if (item) {
-        memset(item, 0, sizeof(MeParamObject));
-        item->value = n;
-        item->type = 1;
-    }
-    return item;
-}
-MeParamObject *MeParams::createCharItem(char *n)
-{
-    MeParamObject *item = (MeParamObject *) malloc(sizeof(MeParamObject));
-    if (item) {
-        memset(item, 0, sizeof(MeParamObject));
-        item->code = strdup(n);
-        item->type = 2;
-    }
-    return item;
-}
-
-void MeParams::addItemToObject(char *string, MeParamObject *item)
-{
-    if (!item)
-        return;
-    if (item->name){
-    	free(item->name);
-    }
-        
-    item->name = strdup(string);
-    MeParamObject *c = _root->child;
-    if (!item)
-        return;
-
-    if (!c) {
-        _root->child = item;
-    } else {
-        while (c && c->next)
-            c = c->next;
-        suffixObject(c, item);
-    }
-}
-void MeParams::deleteItemFromRoot(MeParamObject *c)
-{
-    MeParamObject *next;
-    while (c) {
-        next = c->next;
-        if (c->name) {
-            free(c->name);
-        }
-        if (c->child) {
-            deleteItemFromRoot(c->child);
-        }
-        if(c->code&&c->type==2){
-			free(c->code);
-		}
-		c->type=0;
-        free(c);
-        c = next;
-    }
-}
-MeParamObject *MeParams::detachItemFromObject( char *string)
-{
-    unsigned char i = 0;
-    MeParamObject *c = _root->child;
-    while (c && strcasecmp(c->name, string))
-        i++, c = c->next;
-    if (c)
-        return detachItemFromArray(i);
-    return 0;
-}
-void MeParams::deleteItemFromArray(unsigned char which)
-{
-    deleteItemFromRoot(detachItemFromArray(which));
-}
-MeParamObject *MeParams::detachItemFromArray(unsigned char which)
-{
-    MeParamObject *c = _root->child;
-    while (c && which > 0)
-        c = c->next, which--;
-    if (!c)
-        return 0;
-
-    if (c->prev)
-        c->prev->next = c->next;
-    if (c->next)
-        c->next->prev = c->prev;
-    if (c == _root->child)
-        _root->child = c->next;
-    c->prev = c->next = 0;
-    return c;
-}
-
-void MeParams::suffixObject(MeParamObject *prev, MeParamObject *item)
-{
-    prev->next = item;
-    item->prev = prev;
-}
 
 /*             Serial                  */
 MeSerial::MeSerial():MePort(),SoftwareSerial(NC,NC){
@@ -458,6 +246,20 @@ void MeSerial::begin(long baudrate)
         SoftwareSerial::begin(baudrate);
     }
 }
+
+void MeSerial::end()
+{
+    if(_hard) {
+		#if defined(__AVR_ATmega32U4__)
+            Serial1.end();
+        #else
+            Serial.end();
+		#endif
+    } else {
+        SoftwareSerial::end();
+    }
+}
+
 size_t MeSerial::write(uint8_t byte)
 {
     if(_isServoBusy == true)return -1;
@@ -512,6 +314,7 @@ bool MeSerial::isListening()
         return true;
     else return SoftwareSerial::isListening();
 }
+
 int MeSerial::poll()
 {
     int val = 0;
@@ -526,113 +329,30 @@ int MeSerial::poll()
     }
     return -1;
 }
-bool MeSerial::paramAvailable()
-{
-    bool isParse = (millis()-_lastTime)>100&&_index>0;
-    if(this->available()) {
-        char c = this->read();
-        if(c == '\n'||c == '\r'||isParse) {
-        	if(_index<3){
-	        	return false;
-	        }
-            _cmds[_index] = '\0';
-            char str[_index];
-            strcpy(str, _cmds);
-			int i=0;
-            for(i=0;i<_index;i++){
-            	if(str[i]=='='&&i>0){
-		            _params.parse(str);
-					_index = 0;
-					return true;
-	            }
-            }
-			_index = 0;
-			return false;
-        } else {
-            _cmds[_index] = c;
-            _index++;
-        }
-        
-    	_lastTime = millis();
-    }
-    return false;
-}
 
-double MeSerial::getParamValue(char *str)
-{
-    return _params.getParamValue(str);
-}
-char *MeSerial::getParamCode(char *str)
-{
-    return _params.getParamCode(str);
-}
-MeParams MeSerial::getParams()
-{
-    return _params;
-}
-void MeSerial::findParamName(char *str, int len)
-{
-    byte i = 0;
-    for(i = 0; i < len; i++) {
-        if(str[i] == '=') {
-            char name[i+1];
-            memcpy(name, str, i);
-            name[i] = '\0';
-            char s[len];
-            int j;
-            for(j = i + 1; j < len; j++) {
-                s[j-i-1] = str[j];
-            }
-            findParamValue(s, len - i - 1, name);
-            break;
-        }
-    }
-}
-void MeSerial::findParamValue(char *str, int len, char *name)
-{
-    byte i = 0;
-    for(i = 0; i < len; i++) {
-        if(str[i] == '&' || str[i] == '\0' || i == len - 1) {
-            char v[i+1];
-            memcpy(v, str, i);
-            v[i] = '\0';
-
-            _params.setParam(name, v);
-            if(i < len - 1) {
-                char s[len];
-                int j;
-                for(j = i + 1; j < len; j++) {
-                    s[j-i-1] = str[j];
-                }
-                findParamName(s, len - i - 1);
-                break;
-            }
-        }
-    }
-}
 /*             LineFinder              */
-MeLineFinder::MeLineFinder(): MePort(0){
+MeLineFollower::MeLineFollower(): MePort(0){
 	
 }
-MeLineFinder::MeLineFinder(uint8_t port): MePort(port)
+MeLineFollower::MeLineFollower(uint8_t port): MePort(port)
 {
 
 }
-int MeLineFinder::readSensors()
+uint8_t MeLineFollower::readSensors()
 {
-    int state = S1_IN_S2_IN;
-    int s1State = MePort::Dread1();
-    int s2State = MePort::Dread2();
+    uint8_t state = S1_IN_S2_IN;
+    bool s1State = MePort::dRead1();
+    bool s2State = MePort::dRead2();
     state = ((1 & s1State) << 1) | s2State;
     return state;
 }
-int MeLineFinder::readSensor1()
+bool MeLineFollower::readSensor1()
 {
-    return MePort::Dread1();
+    return MePort::dRead1();
 }
-int MeLineFinder::readSensor2()
+bool MeLineFollower::readSensor2()
 {
-    return MePort::Dread2();
+    return MePort::dRead2();
 }
 /*             LimitSwitch              */
 MeLimitSwitch::MeLimitSwitch(): MePort(0)
@@ -640,13 +360,13 @@ MeLimitSwitch::MeLimitSwitch(): MePort(0)
 }
 MeLimitSwitch::MeLimitSwitch(uint8_t port): MePort(port)
 {
-    _device = DEV1;
+    _device = SLOT1;
     pinMode(s2,INPUT_PULLUP);
 }
 MeLimitSwitch::MeLimitSwitch(uint8_t port,uint8_t slot): MePort(port)
 {
     reset(port,slot);
-    if(getSlot()==DEV2){
+    if(getSlot()==SLOT1){
         pinMode(s1,INPUT_PULLUP);
     }else{
         pinMode(s2,INPUT_PULLUP);
@@ -654,12 +374,12 @@ MeLimitSwitch::MeLimitSwitch(uint8_t port,uint8_t slot): MePort(port)
 }
 bool MeLimitSwitch::touched()                                                                                                                                                          
 {
-    if(getSlot()==DEV2){
-        pinMode(s1,INPUT_PULLUP);
-    }else{
-        pinMode(s2,INPUT_PULLUP);
-    }
-    return getSlot()==DEV2?digitalRead(s1):digitalRead(s2);
+    // if(getSlot()==SLOT2){
+        // pinMode(s1,INPUT_PULLUP);
+    // }else{
+        // pinMode(s2,INPUT_PULLUP);
+    // }
+    return !(getSlot()==SLOT1?digitalRead(s1):digitalRead(s2));
 }
 
 /*             MotorDriver              */
@@ -677,11 +397,11 @@ void MeDCMotor::run(int speed)
     speed = speed < -255 ? -255 : speed;
 
     if(speed >= 0) {
-        MePort::Dwrite2(HIGH);
-        MePort::Awrite1(speed);
+        MePort::dWrite2(HIGH);
+        MePort::aWrite1(speed);
     } else {
-        MePort::Dwrite2(LOW);
-        MePort::Awrite1(-speed);
+        MePort::dWrite2(LOW);
+        MePort::aWrite1(-speed);
     }
 }
 void MeDCMotor::stop()
@@ -712,11 +432,11 @@ long MeUltrasonicSensor::distanceInch()
 long MeUltrasonicSensor::measure()
 {
     long duration;
-    MePort::Dwrite2(LOW);
+    MePort::dWrite2(LOW);
     delayMicroseconds(2);
-    MePort::Dwrite2(HIGH);	
+    MePort::dWrite2(HIGH);	
     delayMicroseconds(10);
-    MePort::Dwrite2(LOW);
+    MePort::dWrite2(LOW);
     pinMode(s2, INPUT);
     duration = pulseIn(s2, HIGH); 
     return duration;
@@ -728,25 +448,25 @@ MeShutter::MeShutter(): MePort(0){
 }
 MeShutter::MeShutter(uint8_t port): MePort(port)
 {
-    MePort::Dwrite1(LOW);
-    MePort::Dwrite2(LOW);
+    MePort::dWrite1(LOW);
+    MePort::dWrite2(LOW);
 }
 void MeShutter::shotOn()
 {
-    MePort::Dwrite1(HIGH);
+    MePort::dWrite1(HIGH);
 }
 void MeShutter::shotOff()
 {
 
-    MePort::Dwrite1(LOW);
+    MePort::dWrite1(LOW);
 }
 void MeShutter::focusOn()
 {
-    MePort::Dwrite2(HIGH);
+    MePort::dWrite2(HIGH);
 }
 void MeShutter::focusOff()
 {
-    MePort::Dwrite2(LOW);
+    MePort::dWrite2(LOW);
 }
 
 /*           Bluetooth                 */
@@ -767,12 +487,35 @@ MeInfraredReceiver::MeInfraredReceiver(uint8_t port): MeSerial(port)
 }
 void MeInfraredReceiver::begin()
 {
-    MeSerial::setHardware(false);
     MeSerial::begin(9600);
+	pinMode(s1,INPUT);
 }
-bool MeInfraredReceiver::buttonState()        // Not available in Switching mode
+
+int MeInfraredReceiver::read()
 {
-    return !(MePort::Dread1());
+	int val;
+	uint16_t i;
+	do{
+		i++;
+		if(++i>2000)break;
+		val = MeSerial::read();							//Read serial infrared data
+		val &= 0xff;
+	}while(val == 0x0 || val == 0xFF);	//0x0 and 0xff are the user code of BC7210A IC	
+	delayMicroseconds(10);
+	return  val;
+
+}
+bool MeInfraredReceiver::buttonState()        // Check button press
+
+{
+	bool val;
+	if(_hard)
+	MeSerial::end();
+	val = MePort::dRead1();
+	if(_hard)
+	begin();
+	
+    return (!val);
 }
 
 MeRGBLed::MeRGBLed():MePort(0) {
@@ -781,19 +524,24 @@ MeRGBLed::MeRGBLed():MePort(0) {
 MeRGBLed::MeRGBLed(uint8_t port):MePort(port) {
 	pinMask = digitalPinToBitMask(s2);
 	ws2812_port = portOutputRegister(digitalPinToPort(s2));
-	ws2812_port_reg = portModeRegister(digitalPinToPort(s2));
+	// ws2812_port_reg = portModeRegister(digitalPinToPort(s2));
+	// *ws2812_port_reg |= pinMask; //set pinMode OUTPUT
+	pinMode(s2,OUTPUT);
 	setNumber(4);
 }
 MeRGBLed::MeRGBLed(uint8_t port,uint8_t slot):MePort(port){
-	if(slot==DEV1){
+	if(slot==SLOT2){
 		pinMask = digitalPinToBitMask(s2);
 		ws2812_port = portOutputRegister(digitalPinToPort(s2));
-		ws2812_port_reg = portModeRegister(digitalPinToPort(s2));
+		pinMode(s2,OUTPUT);
+		// ws2812_port_reg = portModeRegister(digitalPinToPort(s2));
 	}else{
 		pinMask = digitalPinToBitMask(s1);
 		ws2812_port = portOutputRegister(digitalPinToPort(s1));
-		ws2812_port_reg = portModeRegister(digitalPinToPort(s1));
+		pinMode(s1,OUTPUT);
+		// ws2812_port_reg = portModeRegister(digitalPinToPort(s1));
 	}
+	// *ws2812_port_reg |= pinMask; // set pinMode OUTPUT
 	setNumber(4);
 }
 void MeRGBLed::reset(uint8_t port){
@@ -801,7 +549,7 @@ void MeRGBLed::reset(uint8_t port){
 	s1 = mePort[port].s1;
 	pinMask = digitalPinToBitMask(s2);
 	ws2812_port = portOutputRegister(digitalPinToPort(s2));
-	ws2812_port_reg = portModeRegister(digitalPinToPort(s2));
+	// ws2812_port_reg = portModeRegister(digitalPinToPort(s2));
 }
 void MeRGBLed::setNumber(uint8_t num_leds){
 	count_led = num_leds;
@@ -912,16 +660,15 @@ bool MeRGBLed::setColorAt(uint8_t index, long value) {
 #define w_nop8  w_nop4 w_nop4
 #define w_nop16 w_nop8 w_nop8
 
-void  MeRGBLed::rgbled_sendarray_mask(uint8_t *data,uint16_t datlen,uint8_t maskhi,uint8_t *port, uint8_t *portreg)
+void  MeRGBLed::rgbled_sendarray_mask(uint8_t *data,uint16_t datlen,uint8_t maskhi,uint8_t *port)
 {
-  uint8_t curbyte,ctr,masklo;
-  uint8_t sreg_prev;
+  	uint8_t curbyte,ctr,masklo;
+	uint8_t oldSREG = SREG;
+	cli();  //Disables all interrupts
+	
+  masklo = *port & ~maskhi;
+  maskhi = *port | 	maskhi;
   
-  masklo = ~maskhi & *portreg;
-  maskhi |= *portreg;
-  sreg_prev=SREG;
-  cli();  
-
   while (datlen--) {
     curbyte=*data++;
     
@@ -990,11 +737,11 @@ w_nop16
     );
   }
   
-  SREG=sreg_prev;
+  SREG = oldSREG;
 }
 void MeRGBLed::show() {
-	*ws2812_port_reg |= pinMask; // Enable DDR
-	rgbled_sendarray_mask(pixels,3*count_led,pinMask,(uint8_t*) ws2812_port,(uint8_t*) ws2812_port_reg );	
+//	*ws2812_port_reg |= pinMask; // Enable DDR
+	rgbled_sendarray_mask(pixels,3*count_led,pinMask,(uint8_t*) ws2812_port);	
 }
 
 MeRGBLed::~MeRGBLed() {
@@ -1202,459 +949,6 @@ float MeEncoderMotor::getPIDParam(uint8_t type,uint8_t mode){
     return u.fVal;
     
 }
-/*          Stepper     */
-
-MeStepperMotor::MeStepperMotor(uint8_t port, uint8_t selector): MeWire(port, selector)
-{
-	dir=s2;
-	pulse=s1;
-	pinMode(dir,OUTPUT);
-    pinMode(pulse,OUTPUT); 
-	digitalWrite(dir,LOW);
-	digitalWrite(pulse,LOW);
-}
-
-
-
-void MeStepperMotor::begin()
-{
-    MeWire::begin(); // join i2c bus (address optional for master)
-    delay(100);
-    reset();
-	delay(100);
-    setCurrentPosition(0);
-    delay(100);  
-    enable();
-    delay(100);   
-}
-
-uint8_t MeStepperMotor::STP_I2C_communicate(byte mode,long data,byte rlen)
-{
-  stepper.motor.cmd1=STEPPER_CMD;
-  stepper.motor.cmd2=mode;
-  stepper.motor.dev=1;
-  stepper.motor.data=data;
-  byte* RPM;
-  RPM=(byte*)&stepper.c[0];
-  MeWire::request(RPM,RPM,7,rlen);
-  
-  //if((stepper.c[0]==STEPPER_CMD)&&(stepper.c[1]==mode)&&(stepper.c[2]==1))
-   if((stepper.c[0]==STEPPER_CMD)&&(stepper.c[1]==mode))
-      return 1;
-   
-   else
-      return 0;
-}
-
-
-void MeStepperMotor::setMicroStep(byte microStep)
-{
-	
-	STP_I2C_communicate(STP_SET_MS, (long)microStep,3);
-}
-
-
-void MeStepperMotor::reset()
-{
-	STP_I2C_communicate(STP_RESET, 0,3);
-   
-}
-void MeStepperMotor::setMaxSpeed(long stepperMaxSpeed)
-{
-    STP_I2C_communicate(STP_MAX_SPEED,stepperMaxSpeed,3);
-
-}
-void MeStepperMotor::setAcceleration(long stepperAcceleration)
-{
-   STP_I2C_communicate(STP_SET_ACC, stepperAcceleration,3);
-    
-}
-void MeStepperMotor::setSpeed(long stepperSpeed)
-{
-    STP_I2C_communicate(STP_SET_SPEED, stepperSpeed,3);
-   
-}
-void MeStepperMotor::setCurrentPosition(long stepperCurrentPos)
-{
-    
-	STP_I2C_communicate(STP_SET_POS,stepperCurrentPos,3);
-   
-}
-void MeStepperMotor::setI2Cadd(uint8_t slaveI2Cadd)
-{
-    
-	STP_I2C_communicate(SET_I2C_ADD,(long)slaveI2Cadd,3);
-   
-}
-
-void MeStepperMotor::moveTo(long stepperMoveTo)
-{
-   STP_I2C_communicate(STP_MOVE_TO, stepperMoveTo,3);
-    
-}
-
-void MeStepperMotor::move(long stepperMove)
-{
-    STP_I2C_communicate(STP_MOVE, stepperMove,3);
-   
-}
-
-long MeStepperMotor::distanceToGo()
-{
-     STP_I2C_communicate(GET_CURRENT_DIS,0,7);
-
-    return (stepper.motor.data);
-}
-
-long MeStepperMotor::targetPosition()
-{
-     STP_I2C_communicate(GET_GOAL_POS,0,7);
-    return (stepper.motor.data);
-}
-long MeStepperMotor::currentPosition()
-{
-    STP_I2C_communicate(GET_CURRENT_POS,0,7);
-    
-    return (stepper.motor.data);
-}
-
-void MeStepperMotor::enable()
-{
-    STP_I2C_communicate(STP_ENABLE,0,3);
-}
-
-void MeStepperMotor::disable()
-{
-    STP_I2C_communicate(STP_DISABLE,0,3);
-}
-
-void MeStepperMotor::run()
-{
-   STP_I2C_communicate(STP_RUN,0,3);
-}
-
-void MeStepperMotor::runSpeed()
-{
-   STP_I2C_communicate(STP_RUN_SPEED,0,3);
-}
-
-void MeStepperMotor::stop()
-{
-    STP_I2C_communicate(STP_STOP,0,3);
-}
-void MeStepperMotor::onestep()
-{
-    STP_I2C_communicate(STP_RUN_ASTP,0,3);
-}
-
-/*servo*/
-
-#define usToTicks(_us)    (( clockCyclesPerMicrosecond()* _us) / 8)     // converts microseconds to tick (assumes prescale of 8)  // 12 Aug 2009
-#define ticksToUs(_ticks) (( (unsigned)_ticks * 8)/ clockCyclesPerMicrosecond() ) // converts from ticks back to microseconds
-
-
-#define TRIM_DURATION       2                               // compensation ticks to trim adjust for digitalWrite delays // 12 August 2009
-
-//#define NBR_TIMERS        (MAX_SERVOS / SERVOS_PER_TIMER)
-
-static servo_t servos[MAX_SERVOS];                          // static array of servo structures
-static volatile int8_t Channel[_Nbr_16timers ];             // counter for the servo being pulsed for each timer (or -1 if refresh interval)
-
-uint8_t ServoCount = 0;                                     // the total number of attached servos
-
-// convenience macros
-#define SERVO_INDEX_TO_TIMER(_servo_nbr) ((timer16_Sequence_t)(_servo_nbr / SERVOS_PER_TIMER)) // returns the timer controlling this servo
-#define SERVO_INDEX_TO_CHANNEL(_servo_nbr) (_servo_nbr % SERVOS_PER_TIMER)       // returns the index of the servo on this timer
-#define SERVO_INDEX(_timer,_channel)  ((_timer*SERVOS_PER_TIMER) + _channel)     // macro to access servo index by timer and channel
-#define SERVO(_timer,_channel)  (servos[SERVO_INDEX(_timer,_channel)])            // macro to access servo class by timer and channel
-
-#define SERVO_MIN() (MIN_PULSE_WIDTH - this->min * 4)  // minimum value in uS for this servo
-#define SERVO_MAX() (MAX_PULSE_WIDTH - this->max * 4)  // maximum value in uS for this servo 
-
-/************ static functions common to all instances ***********************/
-static bool isTimerActive(timer16_Sequence_t timer)
-{
-    // returns true if any servo is active on this timer
-    for(uint8_t channel = 0; channel < SERVOS_PER_TIMER; channel++) {
-        if(SERVO(timer, channel).Pin.isActive == true)
-            return true;
-    }
-    return false;
-}
-static void finISR(timer16_Sequence_t timer)
-{
-    //disable use of the given timer
-#if defined WIRING   // Wiring
-    if(timer == _timer1) {
-#if defined(__AVR_ATmega1281__)||defined(__AVR_ATmega2561__)
-        TIMSK1 &=  ~_BV(OCIE1A) ;  // disable timer 1 output compare interrupt
-#else
-        TIMSK &=  ~_BV(OCIE1A) ;  // disable timer 1 output compare interrupt
-#endif
-        timerDetach(TIMER1OUTCOMPAREA_INT);
-    } else if(timer == _timer3) {
-#if defined(__AVR_ATmega1281__)||defined(__AVR_ATmega2561__)
-        TIMSK3 &= ~_BV(OCIE3A);    // disable the timer3 output compare A interrupt
-#else
-        ETIMSK &= ~_BV(OCIE3A);    // disable the timer3 output compare A interrupt
-#endif
-        timerDetach(TIMER3OUTCOMPAREA_INT);
-    }
-#else
-    //For arduino - in future: call here to a currently undefined function to reset the timer
-#endif
-}
-static inline void handle_interrupts(timer16_Sequence_t timer, volatile uint16_t *TCNTn, volatile uint16_t *OCRnA)
-{
-    if( Channel[timer] < 0 ) {
-        *TCNTn = 0; // channel set to -1 indicated that refresh interval completed so reset the timer
-        _isServoBusy = false;
-    } else {
-        if( SERVO_INDEX(timer, Channel[timer]) < ServoCount && SERVO(timer, Channel[timer]).Pin.isActive == true ) {
-            digitalWrite( SERVO(timer, Channel[timer]).Pin.nbr, LOW); // pulse this channel low if activated
-            _isServoBusy = false;
-        }
-    }
-
-    Channel[timer]++;    // increment to the next channel
-    if( SERVO_INDEX(timer, Channel[timer]) < ServoCount && Channel[timer] < SERVOS_PER_TIMER) {
-        *OCRnA = *TCNTn + SERVO(timer, Channel[timer]).ticks;
-        if(SERVO(timer, Channel[timer]).Pin.isActive == true) {   // check if activated
-            digitalWrite( SERVO(timer, Channel[timer]).Pin.nbr, HIGH); // its an active channel so pulse it high
-            _isServoBusy = true;
-
-        }
-
-    } else {
-
-        // finished all channels so wait for the refresh period to expire before starting over
-        if( ((unsigned)*TCNTn) + 4 < usToTicks(REFRESH_INTERVAL) )  // allow a few ticks to ensure the next OCR1A not missed
-            *OCRnA = (unsigned int)usToTicks(REFRESH_INTERVAL);
-        else
-            *OCRnA = *TCNTn + 4;  // at least REFRESH_INTERVAL has elapsed
-
-
-        Channel[timer] = -1; // this will get incremented at the end of the refresh period to start again at the first channel
-
-    }
-}
-
-#ifndef WIRING // Wiring pre-defines signal handlers so don't define any if compiling for the Wiring platform
-// Interrupt handlers for Arduino
-#if defined(_useTimer1)
-ISR(TIMER1_COMPA_vect)
-{
-    handle_interrupts(_timer1, &TCNT1, &OCR1A);
-}
-#endif
-#if defined(_useTimer3)
-ISR(TIMER3_COMPA_vect)
-{
-    handle_interrupts(_timer3, &TCNT3, &OCR3A);
-}
-#endif
-
-#if defined(_useTimer4)
-ISR(TIMER4_COMPA_vect)
-{
-    handle_interrupts(_timer4, &TCNT4, &OCR4A);
-}
-#endif
-
-#if defined(_useTimer5)
-ISR(TIMER5_COMPA_vect)
-{
-    handle_interrupts(_timer5, &TCNT5, &OCR5A);
-}
-#endif
-
-#elif defined WIRING
-// Interrupt handlers for Wiring
-#if defined(_useTimer1)
-void Timer1Service()
-{
-    handle_interrupts(_timer1, &TCNT1, &OCR1A);
-}
-#endif
-#if defined(_useTimer3)
-void Timer3Service()
-{
-    handle_interrupts(_timer3, &TCNT3, &OCR3A);
-}
-#endif
-#endif
-
-
-static void initISR(timer16_Sequence_t timer)
-{
-#if defined (_useTimer1)
-    if(timer == _timer1) {
-        TCCR1A = 0;             // normal counting mode
-        TCCR1B = _BV(CS11);     // set prescaler of 8
-        TCNT1 = 0;              // clear the timer count
-#if defined(__AVR_ATmega8__)|| defined(__AVR_ATmega128__)
-        TIFR |= _BV(OCF1A);      // clear any pending interrupts;
-        TIMSK |=  _BV(OCIE1A) ;  // enable the output compare interrupt
-#else
-        // here if not ATmega8 or ATmega128
-        TIFR1 |= _BV(OCF1A);     // clear any pending interrupts;
-        TIMSK1 |=  _BV(OCIE1A) ; // enable the output compare interrupt
-#endif
-#if defined(WIRING)
-        timerAttach(TIMER1OUTCOMPAREA_INT, Timer1Service);
-#endif
-    }
-#endif
-
-
-#if defined (_useTimer3)
-    if(timer == _timer3) {
-        TCCR3A = 0;             // normal counting mode
-        TCCR3B = _BV(CS31);     // set prescaler of 8
-        TCNT3 = 0;              // clear the timer count
-#if defined(__AVR_ATmega128__)
-        TIFR |= _BV(OCF3A);     // clear any pending interrupts;
-        ETIMSK |= _BV(OCIE3A);  // enable the output compare interrupt
-#else
-        TIFR3 = _BV(OCF3A);     // clear any pending interrupts;
-        TIMSK3 =  _BV(OCIE3A) ; // enable the output compare interrupt
-#endif
-#if defined(WIRING)
-        timerAttach(TIMER3OUTCOMPAREA_INT, Timer3Service);  // for Wiring platform only
-#endif
-    }
-#endif
-
-#if defined (_useTimer4)
-    if(timer == _timer4) {
-        TCCR4A = 0;             // normal counting mode
-        TCCR4B = _BV(CS41);     // set prescaler of 8
-        TCNT4 = 0;              // clear the timer count
-        TIFR4 = _BV(OCF4A);     // clear any pending interrupts;
-        TIMSK4 =  _BV(OCIE4A) ; // enable the output compare interrupt
-    }
-#endif
-
-#if defined (_useTimer5)
-    if(timer == _timer5) {
-        TCCR5A = 0;             // normal counting mode
-        TCCR5B = _BV(CS51);     // set prescaler of 8
-        TCNT5 = 0;              // clear the timer count
-        TIFR5 = _BV(OCF5A);     // clear any pending interrupts;
-        TIMSK5 =  _BV(OCIE5A) ; // enable the output compare interrupt
-    }
-#endif
-}
-
-/****************** end of static functions ******************************/
-MeServo::MeServo(): MePort(0){
-	
-}
-MeServo::MeServo(uint8_t port, uint8_t device): MePort(port)
-{
-    servoPin = ( device == DEV1 ? s2 : s1);
-    reset(port,device);
-}
-void MeServo::reset(uint8_t port, uint8_t device)
-{
-	MePort::reset(port, device);
-    servoPin = ( device == DEV1 ? s2 : s1);
-    if(port>0){
-	    if( ServoCount < MAX_SERVOS) {
-	        this->servoIndex = ServoCount++;                    // assign a servo index to this instance
-	        servos[this->servoIndex].ticks = usToTicks(DEFAULT_PULSE_WIDTH);   // store default values  - 12 Aug 2009
-	    } else
-	        this->servoIndex = INVALID_SERVO ;  // too many servos
-    }
-}
-uint8_t MeServo::begin()
-{
-    return this->begin(MIN_PULSE_WIDTH, MAX_PULSE_WIDTH);
-}
-
-uint8_t MeServo::begin(int min, int max)
-{
-    if(this->servoIndex < MAX_SERVOS ) {
-        pinMode( servoPin, OUTPUT) ;                                   // set servo pin to output
-        servos[this->servoIndex].Pin.nbr = servoPin;
-        // todo min/max check: abs(min - MIN_PULSE_WIDTH) /4 < 128
-        this->min  = (MIN_PULSE_WIDTH - min) / 4; //resolution of min/max is 4 uS
-        this->max  = (MAX_PULSE_WIDTH - max) / 4;
-        // initialize the timer if it has not already been initialized
-        timer16_Sequence_t timer = SERVO_INDEX_TO_TIMER(servoIndex);
-        if(isTimerActive(timer) == false)
-            initISR(timer);
-        servos[this->servoIndex].Pin.isActive = true;  // this must be set after the check for isTimerActive
-    }
-    return this->servoIndex ;
-}
-
-void MeServo::detach()
-{
-    servos[this->servoIndex].Pin.isActive = false;
-    timer16_Sequence_t timer = SERVO_INDEX_TO_TIMER(servoIndex);
-    if(isTimerActive(timer) == false) {
-        finISR(timer);
-    }
-	ServoCount--;
-}
-
-void MeServo::write(int value)
-{
-    int delayTime = abs(value - this->read());
-    this->begin();
-    if(value < MIN_PULSE_WIDTH) {
-        // treat values less than 544 as angles in degrees (valid values in microseconds are handled as microseconds)
-        if(value < 0) value = 0;
-        if(value > 180) value = 180;
-        value = map(value, 0, 180, SERVO_MIN(),  SERVO_MAX());
-    }
-    this->writeMicroseconds(value);
-    //delay(delayTime);
-    //this->detach();
-}
-
-void MeServo::writeMicroseconds(int value)
-{
-    // calculate and store the values for the given channel
-    byte channel = this->servoIndex;
-    if( (channel < MAX_SERVOS) ) { // ensure channel is valid
-        if( value < SERVO_MIN() )          // ensure pulse width is valid
-            value = SERVO_MIN();
-        else if( value > SERVO_MAX() )
-            value = SERVO_MAX();
-
-        value = value - TRIM_DURATION;
-        value = usToTicks(value);  // convert to ticks after compensating for interrupt overhead - 12 Aug 2009
-
-        uint8_t oldSREG = SREG;
-        cli();
-        servos[channel].ticks = value;
-        SREG = oldSREG;
-    }
-}
-
-int MeServo::read()   // return the value as degrees
-{
-    return  map( this->readMicroseconds() + 1, SERVO_MIN(), SERVO_MAX(), 0, 180);
-}
-
-int MeServo::readMicroseconds()
-{
-    unsigned int pulsewidth;
-    if( this->servoIndex != INVALID_SERVO )
-        pulsewidth = ticksToUs(servos[this->servoIndex].ticks)  + TRIM_DURATION ;   // 12 aug 2009
-    else
-        pulsewidth  = 0;
-
-    return pulsewidth;
-}
-
-bool MeServo::attached()
-{
-    return servos[this->servoIndex].Pin.isActive ;
-}
-
 
 /*Me4Button*/
 Me4Button::Me4Button() : MePort(0){
@@ -1681,7 +975,7 @@ bool Me4Button::update()
 	uint16_t t=0;
 	uint16_t tmax = 0;
     for(uint8_t i = 0; i < 16; i++) {
-		t = MePort::Aread2();
+		t = MePort::aRead2();
 		if(i<4){
 			continue;
 		}
@@ -1745,14 +1039,14 @@ MeJoystick::MeJoystick(uint8_t port) : MePort(port){}
 
 int MeJoystick::readX()
 {	
-	int mapX = map(MePort::Aread1(),1,980,-255,255);
+	int mapX = map(MePort::aRead1(),1,980,-255,255);
 	return abs(mapX)<15?0:mapX ;
 }
 
 int MeJoystick::readY()
 {
     
-    int mapY = map(MePort::Aread2(),24,980,-255,255);
+    int mapY = map(MePort::aRead2(),24,980,-255,255);
 	return abs(mapY)<15?0:mapY ;
 }
 
@@ -1772,87 +1066,90 @@ MeLightSensor::MeLightSensor() : MePort(0){}
 MeLightSensor::MeLightSensor(uint8_t port) : MePort(port){}
 int MeLightSensor::read()
 {	
-	return MePort::Aread2();
+	return MePort::aRead2();
 }
 
 void MeLightSensor::lightOn()
 {	
-	MePort::Dwrite1(HIGH);
+	MePort::dWrite1(HIGH);
 }
 
 void MeLightSensor::lightOff()
 {	
-	MePort::Dwrite1(LOW);
+	MePort::dWrite1(LOW);
 }
 
 float MeLightSensor::strength()
 {
     
-    return map(MePort::Aread2(),0,1023,0,1023);
+    return map(MePort::aRead2(),0,1023,0,1023);
 }
 
 /*      Sound Sensor        */
 MeSoundSensor::MeSoundSensor() : MePort(0){}
 MeSoundSensor::MeSoundSensor(uint8_t port) : MePort(port){}
-bool MeSoundSensor::Dread()
-{	
-	return MePort::Dread1();
-}
 
 int MeSoundSensor::strength()
-{
-    
-    return MePort::Aread2();
-}
-OneWire::OneWire(){
-	
-}
-OneWire::OneWire(uint8_t pin)
-{
-	pinMode(pin, INPUT_PULLUP);
-	bitmask = PIN_TO_BITMASK(pin);
-	baseReg = PIN_TO_BASEREG(pin);
-	reset_search();
-}
-void OneWire::reset(uint8_t pin)
-{
-	pinMode(pin, INPUT_PULLUP);
-	bitmask = PIN_TO_BITMASK(pin);
-	baseReg = PIN_TO_BASEREG(pin);
-	reset_search();
+{  
+    return MePort::aRead2();
 }
 
-// Perform the onewire reset function.  We will wait up to 250uS for
+MeOneWire::MeOneWire(){
+	
+}
+MeOneWire::MeOneWire(uint8_t pin)
+{
+	bitmask = MePIN_TO_BITMASK(pin);
+	baseReg = MePIN_TO_BASEREG(pin);
+//	reset_search();
+}
+void MeOneWire::reset(uint8_t pin)
+{
+	bitmask = MePIN_TO_BITMASK(pin);
+	baseReg = MePIN_TO_BASEREG(pin);
+//	reset_search();
+}
+bool MeOneWire::readIO(void)
+{
+	MeIO_REG_TYPE mask = bitmask;
+	volatile MeIO_REG_TYPE *reg MeIO_REG_ASM = baseReg;
+	uint8_t r;
+	MeDIRECT_MODE_INPUT(reg, mask);	// allow it to float
+	delayMicroseconds(10);
+	r = MeDIRECT_READ(reg, mask);
+	return r;
+}
+// Perform the MeOneWire reset function.  We will wait up to 250uS for
 // the bus to come high, if it doesn't then it is broken or shorted
 // and we return a 0;
 //
 // Returns 1 if a device asserted a presence pulse, 0 otherwise.
 //
-uint8_t OneWire::reset(void)
+uint8_t MeOneWire::reset(void)
 {
-	IO_REG_TYPE mask = bitmask;
-	volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
+	MeIO_REG_TYPE mask = bitmask;
+	volatile MeIO_REG_TYPE *reg MeIO_REG_ASM = baseReg;
 	uint8_t r;
 	uint8_t retries = 125;
 
 	noInterrupts();
-	DIRECT_MODE_INPUT(reg, mask);
+	MeDIRECT_MODE_INPUT(reg, mask);
 	interrupts();
 	// wait until the wire is high... just in case
 	do {
 		if (--retries == 0) return 0;
 		delayMicroseconds(2);
-	} while ( !DIRECT_READ(reg, mask));
+	} while ( !MeDIRECT_READ(reg, mask));
 
 	noInterrupts();
-	DIRECT_WRITE_LOW(reg, mask);
-	DIRECT_MODE_OUTPUT(reg, mask);	// drive output low
+	MeDIRECT_WRITE_LOW(reg, mask);
+	MeDIRECT_MODE_OUTPUT(reg, mask);	// drive output low
 	interrupts();
 	delayMicroseconds(480);
 	noInterrupts();
-	DIRECT_MODE_INPUT(reg, mask);	// allow it to float
+	MeDIRECT_MODE_INPUT(reg, mask);	// allow it to float
 	delayMicroseconds(70);
-	r = !DIRECT_READ(reg, mask);
+	r = !MeDIRECT_READ(reg, mask);
 	interrupts();
 	delayMicroseconds(410);
 	return r;
@@ -1862,25 +1159,25 @@ uint8_t OneWire::reset(void)
 // Write a bit. Port and bit is used to cut lookup time and provide
 // more certain timing.
 //
-void OneWire::write_bit(uint8_t v)
+void MeOneWire::write_bit(uint8_t v)
 {
-	IO_REG_TYPE mask=bitmask;
-	volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
+	MeIO_REG_TYPE mask=bitmask;
+	volatile MeIO_REG_TYPE *reg MeIO_REG_ASM = baseReg;
 
 	if (v & 1) {
 		noInterrupts();
-		DIRECT_WRITE_LOW(reg, mask);
-		DIRECT_MODE_OUTPUT(reg, mask);	// drive output low
+		MeDIRECT_WRITE_LOW(reg, mask);
+		MeDIRECT_MODE_OUTPUT(reg, mask);	// drive output low
 		delayMicroseconds(10);
-		DIRECT_WRITE_HIGH(reg, mask);	// drive output high
+		MeDIRECT_WRITE_HIGH(reg, mask);	// drive output high
 		interrupts();
 		delayMicroseconds(55);
 	} else {
 		noInterrupts();
-		DIRECT_WRITE_LOW(reg, mask);
-		DIRECT_MODE_OUTPUT(reg, mask);	// drive output low
+		MeDIRECT_WRITE_LOW(reg, mask);
+		MeDIRECT_MODE_OUTPUT(reg, mask);	// drive output low
 		delayMicroseconds(65);
-		DIRECT_WRITE_HIGH(reg, mask);	// drive output high
+		MeDIRECT_WRITE_HIGH(reg, mask);	// drive output high
 		interrupts();
 		delayMicroseconds(5);
 	}
@@ -1890,19 +1187,19 @@ void OneWire::write_bit(uint8_t v)
 // Read a bit. Port and bit is used to cut lookup time and provide
 // more certain timing.
 //
-uint8_t OneWire::read_bit(void)
+uint8_t MeOneWire::read_bit(void)
 {
-	IO_REG_TYPE mask=bitmask;
-	volatile IO_REG_TYPE *reg IO_REG_ASM = baseReg;
+	MeIO_REG_TYPE mask=bitmask;
+	volatile MeIO_REG_TYPE *reg MeIO_REG_ASM = baseReg;
 	uint8_t r;
 
 	noInterrupts();
-	DIRECT_MODE_OUTPUT(reg, mask);
-	DIRECT_WRITE_LOW(reg, mask);
+	MeDIRECT_MODE_OUTPUT(reg, mask);
+	MeDIRECT_WRITE_LOW(reg, mask);
 	delayMicroseconds(3);
-	DIRECT_MODE_INPUT(reg, mask);	// let pin float, pull up will raise
+	MeDIRECT_MODE_INPUT(reg, mask);	// let pin float, pull up will raise
 	delayMicroseconds(10);
-	r = DIRECT_READ(reg, mask);
+	r = MeDIRECT_READ(reg, mask);
 	interrupts();
 	delayMicroseconds(53);
 	return r;
@@ -1915,27 +1212,27 @@ uint8_t OneWire::read_bit(void)
 // go tri-state at the end of the write to avoid heating in a short or
 // other mishap.
 //
-void OneWire::write(uint8_t v, uint8_t power /* = 0 */) {
+void MeOneWire::write(uint8_t v, uint8_t power /* = 0 */) {
     uint8_t bitMask;
 
     for (bitMask = 0x01; bitMask; bitMask <<= 1) {
-	OneWire::write_bit( (bitMask & v)?1:0);
+	MeOneWire::write_bit( (bitMask & v)?1:0);
     }
     if ( !power) {
 	noInterrupts();
-	DIRECT_MODE_INPUT(baseReg, bitmask);
-	DIRECT_WRITE_LOW(baseReg, bitmask);
+	MeDIRECT_MODE_INPUT(baseReg, bitmask);
+	MeDIRECT_WRITE_LOW(baseReg, bitmask);
 	interrupts();
     }
 }
 
-void OneWire::write_bytes(const uint8_t *buf, uint16_t count, bool power /* = 0 */) {
+void MeOneWire::write_bytes(const uint8_t *buf, uint16_t count, bool power /* = 0 */) {
   for (uint16_t i = 0 ; i < count ; i++)
     write(buf[i]);
   if (!power) {
     noInterrupts();
-    DIRECT_MODE_INPUT(baseReg, bitmask);
-    DIRECT_WRITE_LOW(baseReg, bitmask);
+    MeDIRECT_MODE_INPUT(baseReg, bitmask);
+    MeDIRECT_WRITE_LOW(baseReg, bitmask);
     interrupts();
   }
 }
@@ -1943,17 +1240,17 @@ void OneWire::write_bytes(const uint8_t *buf, uint16_t count, bool power /* = 0 
 //
 // Read a byte
 //
-uint8_t OneWire::read() {
+uint8_t MeOneWire::read() {
     uint8_t bitMask;
     uint8_t r = 0;
 
     for (bitMask = 0x01; bitMask; bitMask <<= 1) {
-	if ( OneWire::read_bit()) r |= bitMask;
+	if ( MeOneWire::read_bit()) r |= bitMask;
     }
     return r;
 }
 
-void OneWire::read_bytes(uint8_t *buf, uint16_t count) {
+void MeOneWire::read_bytes(uint8_t *buf, uint16_t count) {
   for (uint16_t i = 0 ; i < count ; i++)
     buf[i] = read();
 }
@@ -1961,7 +1258,7 @@ void OneWire::read_bytes(uint8_t *buf, uint16_t count) {
 //
 // Do a ROM select
 //
-void OneWire::select(const uint8_t rom[8])
+void MeOneWire::select(const uint8_t rom[8])
 {
     uint8_t i;
 
@@ -1973,19 +1270,19 @@ void OneWire::select(const uint8_t rom[8])
 //
 // Do a ROM skip
 //
-void OneWire::skip()
+void MeOneWire::skip()
 {
     write(0xCC);           // Skip ROM
 }
 
-void OneWire::depower()
+void MeOneWire::depower()
 {
 	noInterrupts();
-	DIRECT_MODE_INPUT(baseReg, bitmask);
+	MeDIRECT_MODE_INPUT(baseReg, bitmask);
 	interrupts();
 }
 
-void OneWire::reset_search()
+void MeOneWire::reset_search()
 {
   // reset the search state
   LastDiscrepancy = 0;
@@ -2000,7 +1297,7 @@ void OneWire::reset_search()
 // Setup the search to find the device type 'family_code' on the next call
 // to search(*newAddr) if it is present.
 //
-void OneWire::target_search(uint8_t family_code)
+void MeOneWire::target_search(uint8_t family_code)
 {
    // set the search state to find SearchFamily type devices
    ROM_NO[0] = family_code;
@@ -2014,10 +1311,10 @@ void OneWire::target_search(uint8_t family_code)
 //
 // Perform a search. If this function returns a '1' then it has
 // enumerated the next device and you may retrieve the ROM from the
-// OneWire::address variable. If there are no devices, no further
+// MeOneWire::address variable. If there are no devices, no further
 // devices, or something horrible happens in the middle of the
 // enumeration then a 0 is returned.  If a new device is found then
-// its address is copied to newAddr.  Use OneWire::reset_search() to
+// its address is copied to newAddr.  Use MeOneWire::reset_search() to
 // start over.
 //
 // --- Replaced by the one from the Dallas Semiconductor web site ---
@@ -2027,7 +1324,7 @@ void OneWire::target_search(uint8_t family_code)
 // Return TRUE  : device found, ROM number in ROM_NO buffer
 //        FALSE : device not found, end of search
 //
-uint8_t OneWire::search(uint8_t *newAddr)
+uint8_t MeOneWire::search(uint8_t *newAddr)
 {
    uint8_t id_bit_number;
    uint8_t last_zero, rom_byte_number, search_result;
@@ -2144,6 +1441,33 @@ uint8_t OneWire::search(uint8_t *newAddr)
    for (int i = 0; i < 8; i++) newAddr[i] = ROM_NO[i];
    return search_result;
   }
+  
+// DS18B20 commands
+#define STARTCONVO      0x44  // Tells device to take a temperature reading and put it on the scratchpad
+#define COPYSCRATCH     0x48  // Copy EEPROM
+#define READSCRATCH     0xBE  // Read EEPROM
+#define WRITESCRATCH    0x4E  // Write to EEPROM
+#define RECALLSCRATCH   0xB8  // Reload from last known
+#define READPOWERSUPPLY 0xB4  // Determine if device needs parasite power
+#define ALARMSEARCH     0xEC  // Query bus for devices with an alarm condition
+
+// Scratchpad locations
+//#define TEMP_LSB        0
+//#define TEMP_MSB        1
+//#define HIGH_ALARM_TEMP 2
+//#define LOW_ALARM_TEMP  3
+//#define CONFIGURATION   4
+//#define INTERNAL_BYTE   5
+//#define COUNT_REMAIN    6
+//#define COUNT_PER_C     7
+//#define SCRATCHPAD_CRC  8
+
+// Device resolution
+//#define TEMP_9_BIT  0x1F //  9 bit
+//#define TEMP_10_BIT 0x3F // 10 bit
+//#define TEMP_11_BIT 0x5F // 11 bit
+//#define TEMP_12_BIT 0x7F // 12 bit
+
 MeTemperature::MeTemperature():MePort(){
 	
 }
@@ -2152,41 +1476,38 @@ MeTemperature::MeTemperature(uint8_t port):MePort(port){
 }
 MeTemperature::MeTemperature(uint8_t port,uint8_t slot):MePort(port){
 	MePort::reset(port, slot);
-    _ts.reset( slot == DEV1 ? s2 : s1);
+    _ts.reset( slot == SLOT2 ? s2 : s1);
 }
 void MeTemperature::reset(uint8_t port,uint8_t slot){
 	MePort::reset(port, slot);
-    _ts.reset( slot == DEV1 ? s2 : s1);
+    _ts.reset( slot == SLOT2 ? s2 : s1);
 }
 float MeTemperature::temperature(){
+
 	byte i;
 	byte present = 0;
 	byte type_s;
 	byte data[12];
 	byte addr[8];
 	float celsius;
-	if ( !_ts.search(addr)) {
-	_ts.reset_search();
-	return -100;
-	}
-	
+	long time;
+
 	_ts.reset();
-	_ts.select(addr);
-	_ts.write(0x44, 1);        // start conversion, with parasite power on at the end
+	_ts.skip();
+	_ts.write(STARTCONVO);        // start conversion, with parasite power on at the end
+	time = millis();
+	while(!_ts.readIO() && (millis()-time)<750);
+	
 	present = _ts.reset();
-	_ts.select(addr);    
-	_ts.write(0xBE);         
-	for ( i = 0; i < 9; i++) {           // we need 9 bytes
+	_ts.skip();    
+	_ts.write(READSCRATCH);         
+	for ( i = 0; i < 5; i++) {           // we need 9 bytes
 	data[i] = _ts.read();
 	}
-	int16_t raw = (data[1] << 8) | data[0];
-	byte cfg = (data[4] & 0x60);
-	if (cfg == 0x00) raw = raw & ~7;
-	else if (cfg == 0x20) raw = raw & ~3; 
-	else if (cfg == 0x40) raw = raw & ~1; 
 	
-	celsius = (float)raw / 16.0;
-	return celsius;
+	int16_t rawTemperature = (data[1] << 8) | data[0];
+
+	return (float)rawTemperature * 0.0625;// 12 bit
 }
 
 static int8_t TubeTab[] = {0x3f,0x06,0x5b,0x4f,
@@ -2197,10 +1518,10 @@ static int8_t TubeTab[] = {0x3f,0x06,0x5b,0x4f,
 						   0xe6,0xed,0xfd,0x87,
 						   0xff,0xef,0xf7,0xfc,
 						   0xb9,0xde,0xf9,0xf1,0x40};//0~9,A,b,C,d,E,F,-                    
-MeNumericDisplay::MeNumericDisplay():MePort()
+Me7SegmentDisplay::Me7SegmentDisplay():MePort()
 {
 }
-MeNumericDisplay::MeNumericDisplay(uint8_t port):MePort(port)
+Me7SegmentDisplay::Me7SegmentDisplay(uint8_t port):MePort(port)
 {
   Clkpin = s2;
   Datapin = s1;
@@ -2209,7 +1530,7 @@ MeNumericDisplay::MeNumericDisplay(uint8_t port):MePort(port)
   set();
   clearDisplay();
 }
-void MeNumericDisplay::reset(uint8_t port){
+void Me7SegmentDisplay::reset(uint8_t port){
   reset(port);
   Clkpin = s2;
   Datapin = s1;
@@ -2218,12 +1539,12 @@ void MeNumericDisplay::reset(uint8_t port){
   set();
   clearDisplay();
 }
-void MeNumericDisplay::init(void)
+void Me7SegmentDisplay::init(void)
 {
   clearDisplay();
 }
 
-void MeNumericDisplay::writeByte(int8_t wr_data)
+void Me7SegmentDisplay::writeByte(int8_t wr_data)
 {
   uint8_t i,count1;   
   for(i=0;i<8;i++)        //sent 8bit data
@@ -2254,7 +1575,7 @@ void MeNumericDisplay::writeByte(int8_t wr_data)
   
 }
 //send start signal to TM1637
-void MeNumericDisplay::start(void)
+void Me7SegmentDisplay::start(void)
 {
   digitalWrite(Clkpin,HIGH);//send start signal to TM1637
   digitalWrite(Datapin,HIGH); 
@@ -2262,14 +1583,14 @@ void MeNumericDisplay::start(void)
   digitalWrite(Clkpin,LOW); 
 } 
 //End of transmission
-void MeNumericDisplay::stop(void)
+void Me7SegmentDisplay::stop(void)
 {
   digitalWrite(Clkpin,LOW);
   digitalWrite(Datapin,LOW);
   digitalWrite(Clkpin,HIGH);
   digitalWrite(Datapin,HIGH); 
 }
-void MeNumericDisplay::display(float value){
+void Me7SegmentDisplay::display(float value){
 	
 	int i=0;
 	bool isStart = false;
@@ -2303,7 +1624,7 @@ void MeNumericDisplay::display(float value){
 	}
 	display(disp);
 }
-int MeNumericDisplay::checkNum(float v,int b){
+int Me7SegmentDisplay::checkNum(float v,int b){
  if(b>=0){
 	return floor((v-floor(v/pow(10,b+1))*(pow(10,b+1)))/pow(10,b));
  }else{
@@ -2316,7 +1637,7 @@ int MeNumericDisplay::checkNum(float v,int b){
  }
 }
 
-void MeNumericDisplay::display(int8_t DispData[])
+void Me7SegmentDisplay::display(int8_t DispData[])
 {
   int8_t SegData[4];
   uint8_t i;
@@ -2340,7 +1661,7 @@ void MeNumericDisplay::display(int8_t DispData[])
   stop();           //
 }
 //******************************************
-void MeNumericDisplay::display(uint8_t BitAddr,int8_t DispData)
+void Me7SegmentDisplay::display(uint8_t BitAddr,int8_t DispData)
 {
   int8_t SegData;
   SegData = coding(DispData);
@@ -2356,7 +1677,7 @@ void MeNumericDisplay::display(uint8_t BitAddr,int8_t DispData)
   stop();           //
 }
 
-void MeNumericDisplay::clearDisplay(void)
+void Me7SegmentDisplay::clearDisplay(void)
 {
   display(0x00,0x7f);
   display(0x01,0x7f);
@@ -2364,7 +1685,7 @@ void MeNumericDisplay::clearDisplay(void)
   display(0x03,0x7f);  
 }
 //To take effect the next time it displays.
-void MeNumericDisplay::set(uint8_t brightness,uint8_t SetData,uint8_t SetAddr)
+void Me7SegmentDisplay::set(uint8_t brightness,uint8_t SetData,uint8_t SetAddr)
 {
   Cmd_SetData = SetData;
   Cmd_SetAddr = SetAddr;
@@ -2372,7 +1693,7 @@ void MeNumericDisplay::set(uint8_t brightness,uint8_t SetData,uint8_t SetAddr)
 }
 
 
-void MeNumericDisplay::coding(int8_t DispData[])
+void Me7SegmentDisplay::coding(int8_t DispData[])
 {
   uint8_t PointData = 0; 
   for(uint8_t i = 0;i < 4;i ++)
@@ -2381,13 +1702,14 @@ void MeNumericDisplay::coding(int8_t DispData[])
     else DispData[i] = TubeTab[DispData[i]];
   }
 }
-int8_t MeNumericDisplay::coding(int8_t DispData)
+int8_t Me7SegmentDisplay::coding(int8_t DispData)
 {
   uint8_t PointData = 0; 
   if(DispData == 0x7f) DispData = 0x00 + PointData;//The bit digital tube off
   else DispData = TubeTab[DispData] + PointData;
   return DispData;
 }
+/*************Me Potentiometer****/
 MePotentiometer::MePotentiometer():MePort(0){
 
 }
@@ -2395,8 +1717,20 @@ MePotentiometer::MePotentiometer(uint8_t port):MePort(port){
 
 }
 uint16_t MePotentiometer::read(){
-	return MePort::Aread2();
+	return MePort::aRead2();
 }
+
+/*************Me PIR motion sensor****/
+MePIRMotionSensor::MePIRMotionSensor():MePort(0){
+
+}
+MePIRMotionSensor::MePIRMotionSensor(uint8_t port):MePort(port){
+	pinMode(s2,INPUT);
+}
+bool MePIRMotionSensor::isPeopleDetected(){
+	return MePort::dRead2();
+}
+
 /***********Me GYRO*********/
 MeGyro::MeGyro(){
 
@@ -2532,3 +1866,4 @@ int MeGyro::writeReg(int reg, uint8_t data)
   error = writeData(reg, &data, 1);
   return (error);
 }
+

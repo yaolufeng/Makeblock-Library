@@ -2,21 +2,20 @@
 * File Name          : DualMode_Starter.ino
 * Author             : Jasen
 * Updated            : Xiaoyu
-* Version            : V1.0.0
-* Date               : 3/3/2014
+* Version            : V1.1.0
+* Date               : 5/22/2014
 * Description        : Demo code for Makeblock Starter Robot kit,two motors
                        connect on the M1 and M2 port of baseshield or baseboard, The IR receiver module
                        connect on port 6 and the Ultrasonic sensor connect on port 3.
                        The four black button on the IR controller is used to control the direction 
                        of robot, the number button on the IR controller is for changing the speed of the robot.
                        button 1 is for setting the speed to the slowest,button 9 is for setting the speed to fastest.
-                       We can press the button TEST to switch operating mode between an ultrasonic obstacle-avoiding robot and an IR contrtol robot.
+                       We can press the button A(or button TEST the early version of IR controller) to switch operating mode between an ultrasonic obstacle-avoiding robot and an IR contrtol robot.
 * License            : CC-BY-SA 3.0
 * Copyright (C) 2013 Maker Works Technology Co., Ltd. All right reserved.
 * http://www.makeblock.cc/
 **************************************************************************/
 #include <Makeblock.h>
-#include <Arduino.h>
 #include <SoftwareSerial.h>
 #include <Wire.h>
 
@@ -29,7 +28,7 @@ int turnSpeed = 200;
 int distance=0;
 int randnum = 0;
 boolean leftflag,rightflag;
-int minSpeed = 48;
+int minSpeed = 45;
 int factor = 23;
 
 uint8_t mode = 0;
@@ -46,7 +45,7 @@ void setup()
 
 void loop()
 {
- if(infraredReceiverDecode.buttonState() == 1)
+ if(infraredReceiverDecode.available() || infraredReceiverDecode.buttonState())
     {
         switch(infraredReceiverDecode.read())
         {

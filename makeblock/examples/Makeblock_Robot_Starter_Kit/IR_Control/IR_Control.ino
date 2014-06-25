@@ -2,8 +2,8 @@
 * File Name          : Makeblock IR_Controle.ino
 * Author             : Jasen
 * Updated            : Jasen
-* Version            : V1.0.0
-* Date               : 11/6/2013
+* Version            : V1.1.0
+* Date               : 5/22/2014
 * Description        : Demo code for Makeblock Starter Robot kit,two motors
                        connect on the M1 and M2 port of baseshield, The IR receiver module
                        connect on port 6.
@@ -35,7 +35,7 @@ void setup()
 
 void loop()
 {
- if(infraredReceiverDecode.buttonState() == 1)
+ if(infraredReceiverDecode.available()||infraredReceiverDecode.buttonState())
     {
         switch(infraredReceiverDecode.read())
         {
@@ -78,9 +78,6 @@ void loop()
          case IR_BUTTON_1:
                ChangeSpeed(factor*1+minSpeed);
                break;
-           default:
-       //    Stop();
-           break;
         }
     }
     else

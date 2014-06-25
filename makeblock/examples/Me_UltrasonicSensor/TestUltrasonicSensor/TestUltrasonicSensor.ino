@@ -17,7 +17,7 @@
 #include <SoftwareSerial.h>
 #include <Wire.h>
 
-MeUltrasonicSensor ultraSensor(PORT_7); //Ultrasonic module can ONLY be connected to port 3, 4, 5, 6, 7, 8 of base shield.
+MeUltrasonicSensor ultraSensor(PORT_7); //Ultrasonic module can ONLY be connected to port 3, 4, 6, 7, 8 of base shield.
                                     
 void setup()
 {
@@ -30,6 +30,6 @@ void loop()
 	Serial.print("Distance : ");
 	Serial.print(ultraSensor.distanceCm());
 	Serial.println(" cm");
-	delay(20);// the minimal measure interval is 20 milliseconds
+	delay(100);// the minimal measure interval is 100 milliseconds
 }
 

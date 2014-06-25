@@ -3,6 +3,7 @@
 #include <SoftwareSerial.h>
 MeGyro gyro;
 void setup(){
+  Serial.begin(9600);
   gyro.begin();
 }
 void loop(){
