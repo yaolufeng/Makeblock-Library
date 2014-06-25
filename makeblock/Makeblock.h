@@ -1,4 +1,4 @@
-///@file Makeblock.h head file of Makeblock Library V2.1.0422
+///@file Makeblock.h head file of Makeblock Library V2.1.0625
 ///Define the interface of Makeblock Library
 
 //#include <inttypes.h>
