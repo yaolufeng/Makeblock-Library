@@ -363,6 +363,7 @@ public:
 	///@brief set the rgb value of the led with the index.
 	bool setColorAt(uint8_t index, uint8_t red,uint8_t green,uint8_t blue);
 	bool setColorAt(uint8_t index, long value);
+	void clear();
 	///@brief become effective of all led's change.
 	void show();
 	
@@ -558,6 +559,8 @@ class Me7SegmentDisplay:public MePort
     void init(void);        //To clear the display
     void set(uint8_t = BRIGHT_TYPICAL,uint8_t = 0x40,uint8_t = 0xc0);//To take effect the next time it displays.
 	void reset(uint8_t port);
+	void display(uint16_t value);
+	void display(int value);
     void display(float value);
     void display(int8_t DispData[]);
     void display(uint8_t BitAddr,int8_t DispData);

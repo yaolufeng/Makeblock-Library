@@ -599,6 +599,12 @@ bool MeRGBLed::setColorAt(uint8_t index, long value) {
 	} 
 	return false;
 }
+void MeRGBLed::clear(){
+	for(int i=0;i<count_led;i++){
+		setColorAt(i,0,0,0);
+	}
+	show();
+}
 /*
   This routine writes an array of bytes with RGB values to the Dataout pin
   using the fast 800kHz clockless WS2811/2812 protocol.
@@ -1039,15 +1045,13 @@ MeJoystick::MeJoystick(uint8_t port) : MePort(port){}
 
 int MeJoystick::readX()
 {	
-	int mapX = map(MePort::aRead1(),1,980,-255,255);
-	return abs(mapX)<15?0:mapX ;
+	return MePort::aRead1() ;
 }
 
 int MeJoystick::readY()
 {
-    
-    int mapY = map(MePort::aRead2(),24,980,-255,255);
-	return abs(mapY)<15?0:mapY ;
+   
+	return MePort::aRead2();
 }
 
 float MeJoystick::angle(){
@@ -1589,6 +1593,12 @@ void Me7SegmentDisplay::stop(void)
   digitalWrite(Datapin,LOW);
   digitalWrite(Clkpin,HIGH);
   digitalWrite(Datapin,HIGH); 
+}
+void Me7SegmentDisplay::display(uint16_t value){
+	display((float)value);
+}
+void Me7SegmentDisplay::display(int value){
+	display((float)value);
 }
 void Me7SegmentDisplay::display(float value){
 	
