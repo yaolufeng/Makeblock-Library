@@ -1,4 +1,4 @@
-///@file Makeblock.h head file of Makeblock Library V2.1.0625
+///@file Makeblock.h head file of Makeblock Library V2.1.0916
 ///Define the interface of Makeblock Library
 
 //#include <inttypes.h>
@@ -25,7 +25,12 @@ typedef struct
 } MePort_Sig;
 extern MePort_Sig mePort[11];//mePort[0] is nonsense
 
-struct cRGB { uint8_t g; uint8_t r; uint8_t b; };
+struct cRGB
+{
+    uint8_t g;
+    uint8_t r;
+    uint8_t b;
+};
 
 #define NC 					-1
 
@@ -43,12 +48,12 @@ struct cRGB { uint8_t g; uint8_t r; uint8_t b; };
 #define SLOT1 				1
 #define SLOT2 				2
 #if defined(__AVR_ATmega32U4__)
-// buzzer 
+// buzzer
 #define buzzerOn()  DDRE |= 0x04,PORTE |= B00000100
 #define buzzerOff() DDRE |= 0x04,PORTE &= B11111011
 #else
-#define buzzerOn()  Serial.println("buzzerOn");
-#define buzzerOff() Serial.println("buzzerOff");
+#define buzzerOn()  pinMode(SCL,OUTPUT),digitalWrite(SCL, HIGH)
+#define buzzerOff() pinMode(SCL,OUTPUT),digitalWrite(SCL, LOW)
 #endif
 
 //states of two linefinder sensors
@@ -77,7 +82,6 @@ struct cRGB { uint8_t g; uint8_t r; uint8_t b; };
 #define LS_SET_SPEED 		0x06
 #define LS_SET_COUNT 		0x07
 #define LS_SET_IN_SPEED 	0x08
-
 
 #define LS_RUN_CTRL 0x1A
 #define LS_LED_COUNT        0x1B
@@ -171,7 +175,7 @@ static bool _isServoBusy = false;
 class MePort
 {
 public:
-	MePort();
+    MePort();
     ///@brief initialize the Port
     ///@param port port number of device
     MePort(uint8_t port);
@@ -179,7 +183,7 @@ public:
     ///@retval true on HIGH.
     ///@retval false on LOW.
     uint8_t getPort();
-	uint8_t getSlot();
+    uint8_t getSlot();
     ///@return the level of pin 1 of port
     ///@retval true on HIGH.
     ///@retval false on LOW.
@@ -206,8 +210,8 @@ public:
     void aWrite2(int value);
     uint8_t pin1();
     uint8_t pin2();
-	void reset(uint8_t port);
-	void reset(uint8_t port,uint8_t slot);
+    void reset(uint8_t port);
+    void reset(uint8_t port, uint8_t slot);
 protected:
     uint8_t s1;
     uint8_t s2;
@@ -216,10 +220,10 @@ protected:
 };
 
 ///@brief class of MeSerial
-class MeSerial: public SoftwareSerial,public MePort
+class MeSerial: public SoftwareSerial, public MePort
 {
 public:
-	MeSerial();
+    MeSerial();
     ///@brief initialize
     ///@param port port number of device
     MeSerial(uint8_t port);
@@ -235,7 +239,7 @@ public:
     ///@brief Get the number of bytes (characters) available for reading from the serial port. This is data that's already arrived and stored in the serial receive buffer (which holds 64 bytes).
     int available();
     int poll();
-	void end();
+    void end();
     bool listen();
     bool isListening();
 protected:
@@ -250,7 +254,7 @@ protected:
 class MeWire: public MePort
 {
 public:
-	MeWire(uint8_t address);
+    MeWire(uint8_t address);
     ///@brief initialize
     ///@param port port number of device
     MeWire(uint8_t port, uint8_t address);
@@ -262,10 +266,10 @@ public:
     void begin();
     ///@brief send one byte data request for read one byte from slave address.
     byte read(byte dataAddress);
-    void read(byte dataAddress,uint8_t *buf,int len);
+    void read(byte dataAddress, uint8_t *buf, int len);
     ///@brief send one byte data request for write one byte to slave address.
     void write(byte dataAddress, byte data);
-	void request(byte* writeData,byte*readData,int wlen,int rlen);
+    void request(byte *writeData, byte *readData, int wlen, int rlen);
 protected:
     int _slaveAddress;
 };
@@ -275,7 +279,7 @@ protected:
 class MeLineFollower: public MePort
 {
 public:
-	MeLineFollower();
+    MeLineFollower();
     ///@brief initialize
     MeLineFollower(uint8_t port);
     ///@brief state of all sensors
@@ -290,9 +294,9 @@ public:
 class MeLimitSwitch: public MePort
 {
 public:
-	MeLimitSwitch();
-	MeLimitSwitch(uint8_t port);
-    MeLimitSwitch(uint8_t port,uint8_t slot);
+    MeLimitSwitch();
+    MeLimitSwitch(uint8_t port);
+    MeLimitSwitch(uint8_t port, uint8_t slot);
     bool touched();
 private:
     uint8_t _device;
@@ -302,17 +306,17 @@ private:
 class MeUltrasonicSensor: public MePort
 {
 public :
-	MeUltrasonicSensor();
+    MeUltrasonicSensor();
     MeUltrasonicSensor(uint8_t port);
-    long distanceCm();
-    long distanceInch();
-    long measure();
+    double distanceCm(uint16_t = 400);
+    double distanceInch(uint16_t = 180);
+    long measure(unsigned long = 30000);
 };
 ///@brief Class for DC Motor Module
 class MeDCMotor: public MePort
 {
 public:
-	MeDCMotor();
+    MeDCMotor();
     MeDCMotor(uint8_t port);
     void run(int speed);
     void stop();
@@ -321,7 +325,7 @@ public:
 class MeShutter: public MePort
 {
 public:
-	MeShutter();
+    MeShutter();
     MeShutter(uint8_t port);
     void shotOn();
     void shotOff();
@@ -332,118 +336,110 @@ public:
 class MeBluetooth: public MeSerial
 {
 public:
-	MeBluetooth();
+    MeBluetooth();
     MeBluetooth(uint8_t port);
 };
 ///@brief Class for Infrared Receiver Module
 class MeInfraredReceiver: public MeSerial
 {
 public:
-	MeInfraredReceiver();
+    MeInfraredReceiver();
     MeInfraredReceiver(uint8_t port);
     void begin();
-	int read();
+    int read();
     ///@brief check press state of button
     bool buttonState();
 };
 ///@brief Class for RGB Led Module(http://www.makeblock.cc/me-rgb-led-v1-0/) and Led Strip(http://www.makeblock.cc/led-rgb-strip-addressable-sealed-1m/)
-class MeRGBLed:public MePort {
-public: 
-	MeRGBLed();
-	MeRGBLed(uint8_t port);
-	MeRGBLed(uint8_t port,uint8_t slot);
-	~MeRGBLed();
-	void reset(uint8_t port);
-	///@brief set the count of leds.
-	void setNumber(uint8_t num_led);
-	///@brief get the count of leds.
-	uint8_t getNumber();
-	///@brief get the rgb value of the led with the index.
-	cRGB getColorAt(uint8_t index);
-	///@brief set the rgb value of the led with the index.
-	bool setColorAt(uint8_t index, uint8_t red,uint8_t green,uint8_t blue);
-	bool setColorAt(uint8_t index, long value);
-	void clear();
-	///@brief become effective of all led's change.
-	void show();
-	
-private:
-	uint16_t count_led;
-	uint8_t *pixels;
-	
-	void rgbled_sendarray_mask(uint8_t *array,uint16_t length, uint8_t pinmask,uint8_t *port);
+class MeRGBLed: public MePort
+{
+public:
+    MeRGBLed();
+    MeRGBLed(uint8_t port);
+    MeRGBLed(uint8_t port, uint8_t slot);
+    ~MeRGBLed();
+    void reset(uint8_t port);
+    ///@brief set the count of leds.
+    void setNumber(uint8_t num_led);
+    ///@brief get the count of leds.
+    uint8_t getNumber();
+    ///@brief get the rgb value of the led with the index.
+    cRGB getColorAt(uint8_t index);
+    ///@brief set the rgb value of the led with the index.
+    bool setColorAt(uint8_t index, uint8_t red, uint8_t green, uint8_t blue);
+    bool setColorAt(uint8_t index, long value);
+    void clear();
+    ///@brief become effective of all led's change.
+    void show();
 
-	const volatile uint8_t *ws2812_port;
-	volatile uint8_t *ws2812_port_reg;
-	uint8_t pinMask; 
+private:
+    uint16_t count_led;
+    uint8_t *pixels;
+
+    void rgbled_sendarray_mask(uint8_t *array, uint16_t length, uint8_t pinmask, uint8_t *port);
+
+    const volatile uint8_t *ws2812_port;
+    volatile uint8_t *ws2812_port_reg;
+    uint8_t pinMask;
 };
 ///@brief Class for Encoder Motor Driver
-class MeEncoderMotor: public MeWire{
-    public:
-        MeEncoderMotor(uint8_t selector,uint8_t slot);
-        void begin();
-        boolean setCounter(uint8_t counter);
-        boolean setRatio(float ratio);
-        boolean setPID(float mp,float mi,float md,uint8_t mode);
-        boolean move(long degrees,float speed);
-        boolean moveTo(long degrees,float speed);
-        boolean runTurns(float turns);
-        boolean runSpeed(float speed);
-        boolean runSpeedAndTime(float speed,long time);
-        boolean setCommandFlag(boolean flag);
-        boolean resetEncoder();
-        boolean enableDebug();
-        float getCurrentSpeed();
-        float getCurrentPosition();
-        float getPIDParam(uint8_t type,uint8_t mode);
-    private:
-    	uint8_t _slot;    
+class MeEncoderMotor: public MeWire
+{
+public:
+    MeEncoderMotor(uint8_t selector, uint8_t slot);
+    void begin();
+    boolean setCounter(uint8_t counter);
+    boolean setRatio(float ratio);
+    boolean setPID(float mp, float mi, float md, uint8_t mode);
+    boolean move(long degrees, float speed);
+    boolean moveTo(long degrees, float speed);
+    boolean runTurns(float turns);
+    boolean runSpeed(float speed);
+    boolean runSpeedAndTime(float speed, long time);
+    boolean setCommandFlag(boolean flag);
+    boolean resetEncoder();
+    boolean enableDebug();
+    float getCurrentSpeed();
+    float getCurrentPosition();
+    float getPIDParam(uint8_t type, uint8_t mode);
+private:
+    uint8_t _slot;
 };
 
 ///@brief Class for Button Module
 class Me4Button: public MePort
 {
 public:
-	Me4Button();
+    Me4Button();
     Me4Button(uint8_t port);
     uint8_t pressed();
-    uint8_t released();
-
-protected:
-    uint16_t _toggleState, _oldState;
-    uint8_t _pressedState,_prevPressedState, _releasedState;
-    uint8_t _heldState;
-    bool update();
-    int _heldTime;
-    int _millisMark;
-
 };
 
 ///@brief Class for Joystick Module
 class MeJoystick : public MePort
 {
 public:
-	MeJoystick();
+    MeJoystick();
     MeJoystick(uint8_t port);
-	///@brief get the value of x-axis
+    ///@brief get the value of x-axis
     int readX();
-	///@brief get the value of y-axis
+    ///@brief get the value of y-axis
     int readY();
-	float angle();
-	float strength();
+    float angle();
+    float strength();
 };
 ///@brief Class for Light Sensor Module
 class MeLightSensor : public MePort
 {
 public:
-	MeLightSensor();
+    MeLightSensor();
     MeLightSensor(uint8_t port);
-	///@brief get the value of light intensity
+    ///@brief get the value of light intensity
     int read();
-	///@brief turn on the led.
-	void lightOn();
-	///@brief turn off the led.
-	void lightOff();
+    ///@brief turn on the led.
+    void lightOn();
+    ///@brief turn off the led.
+    void lightOff();
     float strength();
 };
 
@@ -451,14 +447,14 @@ public:
 class MeSoundSensor : public MePort
 {
 public:
-	MeSoundSensor();
+    MeSoundSensor();
     MeSoundSensor(uint8_t port);
-	///@brief get the value of sound intensity
+    ///@brief get the value of sound intensity
     int strength();
 };
 class MeOneWire
 {
-  private:
+private:
     MeIO_REG_TYPE bitmask;
     volatile MeIO_REG_TYPE *baseReg;
     // global search state
@@ -468,11 +464,11 @@ class MeOneWire
     uint8_t LastDeviceFlag;
 
 
-  public:
-  	MeOneWire();
+public:
+    MeOneWire();
     MeOneWire( uint8_t pin);
-	bool readIO(void);
-	void reset(uint8_t pin);
+    bool readIO(void);
+    void reset(uint8_t pin);
     // Perform a 1-Wire reset cycle. Returns 1 if a device responds
     // with a presence pulse.  Returns 0 if there is no device or the
     // bus is shorted or otherwise held low for more than 250uS
@@ -527,22 +523,23 @@ class MeOneWire
     uint8_t search(uint8_t *newAddr);
 };
 ///@brief Class for temperature sensor
-class MeTemperature:public MePort{
-	public:
-		MeTemperature();
-		MeTemperature(uint8_t port);
-		MeTemperature(uint8_t port,uint8_t slot);
-		void reset(uint8_t port, uint8_t slot);
-		///@brief get the celsius of temperature
-		float temperature();
-	private:
-		MeOneWire _ts;		
+class MeTemperature: public MePort
+{
+public:
+    MeTemperature();
+    MeTemperature(uint8_t port);
+    MeTemperature(uint8_t port, uint8_t slot);
+    void reset(uint8_t port, uint8_t slot);
+    ///@brief get the celsius of temperature
+    float temperature();
+private:
+    MeOneWire _ts;
 };
 //************definitions for TM1637*********************
 #define ADDR_AUTO  0x40
 #define ADDR_FIXED 0x44
 
-#define STARTADDR  0xc0 
+#define STARTADDR  0xc0
 /**** definitions for the clock point of the digit tube *******/
 #define POINT_ON   1
 #define POINT_OFF  0
@@ -551,21 +548,23 @@ class MeTemperature:public MePort{
 #define  BRIGHT_TYPICAL 2
 #define  BRIGHTEST      7
 ///@brief Class for numeric display module
-class Me7SegmentDisplay:public MePort
+class Me7SegmentDisplay: public MePort
 {
-  public:
+public:
     Me7SegmentDisplay();
-	Me7SegmentDisplay(uint8_t port);
+    Me7SegmentDisplay(uint8_t port);
     void init(void);        //To clear the display
-    void set(uint8_t = BRIGHT_TYPICAL,uint8_t = 0x40,uint8_t = 0xc0);//To take effect the next time it displays.
-	void reset(uint8_t port);
-	void display(uint16_t value);
-	void display(int value);
-    void display(float value);
+    void set(uint8_t = BRIGHT_TYPICAL, uint8_t = 0x40, uint8_t = 0xc0); //To take effect the next time it displays.
+    void reset(uint8_t port);
+    void write(int8_t SegData[]);
+    void write(uint8_t BitAddr, int8_t SegData);
+    void display(uint16_t value);
+    void display(int16_t value);
+    void display(double value, uint8_t = 1) ;
     void display(int8_t DispData[]);
-    void display(uint8_t BitAddr,int8_t DispData);
+    void display(uint8_t BitAddr, int8_t DispData);
     void clearDisplay(void);
-  private:
+private:
     uint8_t Cmd_SetData;
     uint8_t Cmd_SetAddr;
     uint8_t Cmd_DispCtrl;
@@ -574,49 +573,51 @@ class Me7SegmentDisplay:public MePort
     void start(void);//send start bits
     void stop(void); //send stop bits
     void point(boolean PointFlag);//whether to light the clock point ":".To take effect the next time it displays.
-    void coding(int8_t DispData[]); 
-    int8_t coding(int8_t DispData); 
-  	int checkNum(float v,int b);
+    void coding(int8_t DispData[]);
+    int8_t coding(int8_t DispData);
     uint8_t Clkpin;
     uint8_t Datapin;
 };
 ///@brief Class for potentiometer
-class MePotentiometer:public MePort{
+class MePotentiometer: public MePort
+{
 public:
-	MePotentiometer();
-	MePotentiometer(uint8_t port);
-	uint16_t read();
+    MePotentiometer();
+    MePotentiometer(uint8_t port);
+    uint16_t read();
 };
 
 ///@brief Class for PIR Motion Sensor
-class MePIRMotionSensor:public MePort{
+class MePIRMotionSensor: public MePort
+{
 public:
-	MePIRMotionSensor();
-	MePIRMotionSensor(uint8_t port);
-	bool isPeopleDetected();
+    MePIRMotionSensor();
+    MePIRMotionSensor(uint8_t port);
+    bool isPeopleDetected();
 };
 
 ///@brief Class for gyro sensor
-class MeGyro{
-	public:
-		MeGyro();
-		void begin();
-		void update();
-		double angleX();
-		double angleY();
-		double angleZ();
-	private:
-		void calibrate();
-		int readData(int start, uint8_t *buffer, int size);
-		int writeData(int start, const uint8_t *pData, int size);
-		int writeReg(int reg, uint8_t data);
-		
-		double gSensitivity; // for 500 deg/s, check data sheet
-		double gx, gy, gz;
-		double gyrX, gyrY, gyrZ;
-		int16_t accX, accY, accZ;
-		double gyrXoffs, gyrYoffs, gyrZoffs;
-		double FREQ;
-		uint8_t i2cData[14];
+class MeGyro
+{
+public:
+    MeGyro();
+    void begin();
+    void update();
+    double angleX();
+    double angleY();
+    double angleZ();
+private:
+    void calibrate();
+    int readData(int start, uint8_t *buffer, int size);
+    int writeData(int start, const uint8_t *pData, int size);
+    int writeReg(int reg, uint8_t data);
+
+    double gSensitivity; // for 500 deg/s, check data sheet
+    double gx, gy, gz;
+    double gyrX, gyrY, gyrZ;
+    int16_t accX, accY, accZ;
+    double gyrXoffs, gyrYoffs, gyrZoffs;
+    double FREQ;
+    uint8_t i2cData[14];
 };
 #endif
