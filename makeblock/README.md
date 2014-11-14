@@ -7,7 +7,6 @@
 [![alt text](../images/Starter.png "")](http://www.makeblock.cc/starter-robot-kit-v2-0-blue-with-electronics/)
 
 * [Ultrasonic Car](examples/Makeblock_Robot_Starter_Kit/Ultrasonic_car/Ultrasonic_car.ino)
-* [Bluetooth Control](examples/Makeblock_Robot_Starter_Kit/Bluetooth_Control)
 * [IR Control](examples/Makeblock_Robot_Starter_Kit/IR_Control/IR_Control.ino)
 * [Dual Mode](examples/Makeblock_Robot_Starter_Kit/DualMode_Starter/DualMode_Starter.ino)
 
