@@ -814,233 +814,498 @@ MeRGBLed::~MeRGBLed()
 
 }
 
-/*          EncoderMotor        */
-
-MeEncoderMotor::MeEncoderMotor(uint8_t selector, uint8_t slot): MeWire(selector)
+//  function:       pack data into a package to send
+//  param:  buf     buffer to save package
+//          bufSize size of buf
+//          module  the associated module of package
+//          data    the data to pack
+//          length  the length(size) of data
+//  return: 0       error
+//          other   package size
+uint32_t MeHost_Pack(uint8_t * buf,
+                     uint32_t bufSize, 
+                     uint8_t module, 
+                     uint8_t * data, 
+                     uint32_t length)
 {
-    _slot = slot;
+    uint32_t i = 0;
+
+    //  head: 0xA5
+    buf[i++] = 0xA5;
+    buf[i++] = module;
+    //  pack length
+    buf[i++] = *((uint8_t *)&length + 0);
+    buf[i++] = *((uint8_t *)&length + 1);
+    buf[i++] = *((uint8_t *)&length + 2);
+    buf[i++] = *((uint8_t *)&length + 3);
+    //  pack data
+    for(uint32_t j = 0; j < length; ++j)
+    {
+        buf[i++] = data[j];
+    }
+
+    //  calculate the LRC
+    uint8_t check = 0x00;
+    for(uint32_t j = 0; j < length; ++j)
+    {
+        check ^= data[j];
+    }
+    buf[i++] = check;
+
+    //  tail: 0x5A
+    buf[i++] = 0x5A;
+
+    if (i > bufSize)
+    {
+        return 0;
+    }
+    else
+    {
+        return i;
+    }
 }
+
+
+#define BUF_SIZE            256
+#define MASK                255
+
+class MeHost_Parser
+{
+public:
+    MeHost_Parser();
+    ~MeHost_Parser();
+
+    //  push data to buffer
+    uint8_t PushStr(uint8_t * str, uint32_t length);
+    uint8_t PushByte(uint8_t ch);
+    //  run state machine
+    uint8_t Run();
+    //  get the package ready state
+    uint8_t PackageReady();
+    //  copy data to user's buffer
+    uint8_t GetData(uint8_t *buf, uint32_t size);
+
+    void Print(char *str, uint32_t * cnt);
+private:
+    int state;
+    uint8_t buffer[BUF_SIZE];
+    uint32_t in;
+    uint32_t out;
+    uint8_t packageReady;
+
+    uint8_t module;
+    uint32_t length;
+    uint8_t *data;
+    uint8_t check;
+
+    uint32_t lengthRead;
+    uint32_t currentDataPos;
+
+    uint8_t GetByte(uint8_t * ch);
+};
+
+
+#define HEAD    0xA5
+#define TAIL    0x5A
+
+//  states
+#define ST_WAIT_4_START     0x01
+#define ST_HEAD_READ        0x02
+#define ST_MODULE_READ      0x03
+#define ST_LENGTH_READ      0x04
+#define ST_DATA_READ        0x05
+#define ST_CHECK_READ       0x06
+
+MeHost_Parser::MeHost_Parser()
+{
+    state = ST_WAIT_4_START;
+    in = 0;
+    out = 0;
+    packageReady = 0;
+
+    module = 0;
+    length = 0;
+    data = NULL;
+    check = 0;
+
+    lengthRead = 0;
+    currentDataPos = 0;
+}
+
+MeHost_Parser::~MeHost_Parser()
+{
+    ;
+}
+
+uint8_t MeHost_Parser::PackageReady()
+{
+    return (1 == packageReady);
+}
+
+uint8_t MeHost_Parser::PushStr(uint8_t * str, uint32_t length)
+{
+    if (length > ((in + BUF_SIZE - out - 1) & MASK))
+    {
+        return 0;
+    }
+    else
+    {
+        for (int i = 0; i < length; ++i)
+        {
+            PushByte(str[i]);
+        }
+    }
+}
+
+uint8_t MeHost_Parser::PushByte(uint8_t ch)
+{
+    if (((in + 1) & MASK) != out)
+    {
+        buffer[in] = ch;
+        ++in;
+        in &= MASK;
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
+}
+
+uint8_t MeHost_Parser::GetByte(uint8_t * ch)
+{
+    if (in != out)
+    {
+        *ch = buffer[out];
+        ++out;
+        out &= MASK;
+        return 1;
+    }
+    else
+    {
+        // Serial.println("GET error!");
+        return 0;
+    }
+}
+
+uint8_t CalculateLRC(uint8_t *data, uint32_t length)
+{
+    uint8_t LRC = 0;
+    for (uint32_t i = 0; i < length; ++i)
+    {
+        LRC ^= data[i];
+    }
+    return LRC;
+}
+
+uint8_t MeHost_Parser::Run(void)
+{
+    uint8_t ch = 0;
+    while (GetByte(&ch))
+    {
+        switch (state)
+        {
+        case ST_WAIT_4_START:
+            if (HEAD == ch)
+            {
+                state = ST_HEAD_READ;
+            }
+            break;
+        case ST_HEAD_READ:
+            module = ch;
+            state = ST_MODULE_READ;
+            break;
+        case ST_MODULE_READ:
+            //  read 4 bytes as "length"
+            *(((uint8_t *)&length) + lengthRead) = ch;
+            ++lengthRead;
+            if (4 == lengthRead)
+            {
+                lengthRead = 0;
+                state = ST_LENGTH_READ;
+            }
+            break;
+        case ST_LENGTH_READ:
+            //  alloc space for data
+            if (0 == currentDataPos)
+            {
+                if (length > 255)
+                {
+                    state = ST_WAIT_4_START;
+                    currentDataPos = 0;
+                    lengthRead = 0;
+                    length = 0;
+                    module = 0;
+                    check = 0;
+                    break;
+                }
+                data = (uint8_t *)malloc(length + 1);
+                if (NULL == data)
+                {
+                    state = ST_WAIT_4_START;
+                    currentDataPos = 0;
+                    lengthRead = 0;
+                    length = 0;
+                    module = 0;
+                    check = 0;
+                    break;
+                }
+            }
+            //  read data
+            data[currentDataPos] = ch;
+            ++currentDataPos;
+            if (currentDataPos == length)
+            {
+                currentDataPos = 0;
+                state = ST_DATA_READ;
+            }
+            break;
+        case ST_DATA_READ:
+            check = ch;
+            if (check != CalculateLRC(data, length))
+            {
+                state = ST_WAIT_4_START;
+                if (NULL != data)
+                {
+                    free(data);
+                    data = NULL;
+                }
+                currentDataPos = 0;
+                lengthRead = 0;
+                length = 0;
+                module = 0;
+                check = 0;
+            }
+            else
+            {
+                state = ST_CHECK_READ;
+            }
+            break;
+        case ST_CHECK_READ:
+            if (TAIL != ch)
+            {
+                if (NULL != data)
+                {
+                    free(data);
+                    data = NULL;
+                }
+                length = 0;
+            }
+            else
+            {
+                packageReady = 1;
+            }
+            state = ST_WAIT_4_START;
+            currentDataPos = 0;
+            lengthRead = 0;
+            module = 0;
+            check = 0;
+            break;
+        default:
+            break;
+        }
+    }
+    return state;
+}
+
+
+
+uint8_t MeHost_Parser::GetData(uint8_t *buf, uint32_t size)
+{
+    int copySize = (size > length) ? length : size;
+    if ((NULL != data) && (NULL != buf))
+    {
+        memcpy(buf, data, copySize);
+        free(data);
+        data = NULL;
+        length = 0;
+        packageReady = 0;
+
+        return copySize;
+    }
+    else
+    {
+        return 0;
+    }
+}
+
+//  frame type
+#define ENCODER_MOTOR_GET_PARAM     0x01
+#define ENCODER_MOTOR_SAVE_PARAM    0x02
+#define ENCODER_MOTOR_TEST_PARAM    0x03
+#define ENCODER_MOTOR_SHOW_PARAM    0x04
+#define ENCODER_MOTOR_RUN_STOP      0x05
+#define ENCODER_MOTOR_GET_DIFF_POS  0x06
+#define ENCODER_MOTOR_RESET         0x07
+#define ENCODER_MOTOR_SPEED_TIME    0x08
+#define ENCODER_MOTOR_GET_SPEED     0x09
+#define ENCODER_MOTOR_GET_POS       0x10
+#define ENCODER_MOTOR_MOVE          0x11
+#define ENCODER_MOTOR_MOVE_TO       0x12
+#define ENCODER_MOTOR_DEBUG_STR     0xCC
+#define ENCODER_MOTOR_ACKNOWLEDGE   0xFF
+
+MeHost_Parser encoderParser = MeHost_Parser();
+
+/*          EncoderMotor        */
+MeEncoderMotor::MeEncoderMotor(uint8_t addr,uint8_t slot):MeWire(addr - 1)
+{
+    _slot = slot - 1;
+}
+
 void MeEncoderMotor::begin()
 {
     MeWire::begin();
-    resetEncoder();
-}
-boolean MeEncoderMotor::setCounter(uint8_t counter)
-{
-    byte w[5] = {0};
-    byte r[4] = {0};
-    w[0] = 0x91;
-    w[1] = 0x23;
-    w[2] = 0;
-    w[3] = _slot;
-    w[4] = counter;
-    request(w, r, 5, 4);
-    return r[3] == 1;
-}
-boolean MeEncoderMotor::setRatio(float ratio)
-{
-    byte w[7] = {0};
-    byte r[4] = {0};
-    w[0] = 0x91;
-    w[1] = 0x22;
-    w[2] = _slot;
-    u.fVal = ratio;
-    w[3] = u.b[0];
-    w[4] = u.b[1];
-    w[5] = u.b[2];
-    w[6] = u.b[3];
-    request(w, r, 7, 4);
-    return r[3] == 1;
-}
-boolean MeEncoderMotor::setPID(float mp, float mi, float md, uint8_t mode)
-{
-
-    byte w[9] = {0};
-    byte r[4] = {0};
-    w[0] = 0x91;
-    w[1] = 0x24;
-    w[2] = _slot;
-    w[4] = mode;
-
-    int i;
-
-    w[3] = 0;
-    u.fVal = mp;
-    for(i = 0; i < 4; i++)
-    {
-        w[5+i] = u.b[i];
-    }
-    request(w, r, 9, 4);
-
-    w[3] = 1;
-    u.fVal = mi;
-    for(i = 0; i < 4; i++)
-    {
-        w[5+i] = u.b[i];
-    }
-    request(w, r, 9, 4);
-
-    w[3] = 2;
-    u.fVal = md;
-    for(i = 0; i < 4; i++)
-    {
-        w[5+i] = u.b[i];
-    }
-    request(w, r, 9, 4);
-    return r[3] == 1;
-}
-boolean MeEncoderMotor::moveTo(long degrees, float speed)
-{
-    byte w[9] = {0};
-    byte r[4] = {0};
-    w[0] = 0x91;
-    w[1] = 0x32;
-    w[2] = _slot;
-    int i;
-    u.lVal = degrees;
-    for(i = 0; i < 4; i++)
-    {
-        w[3+i] = u.b[i];
-    }
-    u.fVal = speed;
-    for(i = 0; i < 4; i++)
-    {
-        w[7+i] = u.b[i];
-    }
-    request(w, r, 11, 4);
-    return r[3] == 1;
-}
-boolean MeEncoderMotor::move(long degrees, float speed)
-{
-    byte w[9] = {0};
-    byte r[4] = {0};
-    w[0] = 0x91;
-    w[1] = 0x31;
-    w[2] = _slot;
-    int i;
-    u.lVal = degrees;
-    for(i = 0; i < 4; i++)
-    {
-        w[3+i] = u.b[i];
-    }
-    u.fVal = speed;
-    for(i = 0; i < 4; i++)
-    {
-        w[7+i] = u.b[i];
-    }
-    request(w, r, 11, 4);
-    return r[3] == 1;
-}
-boolean MeEncoderMotor::runTurns(float turns)
-{
-    return move(turns * 360, 10);
-}
-boolean MeEncoderMotor::runSpeed(float speed)
-{
-    return runSpeedAndTime(speed, 0);
-}
-boolean MeEncoderMotor::runSpeedAndTime(float speed, long time)
-{
-    byte w[9] = {0};
-    byte r[4] = {0};
-    w[0] = 0x91;
-    w[1] = 0x33;
-    w[2] = _slot;
-    int i;
-    u.fVal = speed;
-    for(i = 0; i < 4; i++)
-    {
-        w[3+i] = u.b[i];
-    }
-    u.lVal = time;
-    for(i = 0; i < 4; i++)
-    {
-        w[7+i] = u.b[i];
-    }
-    request(w, r, 11, 4);
-    return r[3] == 1;
+    Reset();
 }
 
-boolean MeEncoderMotor::resetEncoder()
+boolean MeEncoderMotor::Reset()
 {
-    byte w[3] = {0};
-    byte r[4] = {0};
-    w[0] = 0x91;
-    w[1] = 0x54;
-    w[2] = _slot;
-    request(w, r, 11, 3);
-    return r[3] == 1;
-}
-boolean MeEncoderMotor::enableDebug()
-{
+    uint8_t w[10] = {0};
+    uint8_t r[10] = {0};
 
-    byte w[2] = {0};
-    byte r[4] = {0};
-    w[0] = 0x91;
-    w[1] = 0x55;
-    request(w, r, 11, 2);
-    return r[3] == 1;
+    uint8_t data[2] = {0};
+    data[0] = _slot;
+    data[1] = ENCODER_MOTOR_RESET;
+
+    MeHost_Pack(w, 10, 0x01, data, 2);
+    request(w, r, 10, 10);
+    encoderParser.PushStr(r, 10);
+
+    uint8_t ack[2] = {0};
+    encoderParser.GetData(ack, 2);
+    return ack[1];
 }
 
-boolean MeEncoderMotor::setCommandFlag(boolean flag)
+boolean MeEncoderMotor::MoveTo(float angle, float speed)
 {
-    byte w[4] = {0};
-    byte r[4] = {0};
-    w[0] = 0x91;
-    w[1] = 0x41;
-    w[2] = _slot;
-    w[3] = flag;
-    request(w, r, 4, 4);
-    return r[3] == 1;
-}
-float MeEncoderMotor::getCurrentSpeed()
-{
-    byte w[3] = {0};
-    byte r[7] = {0};
-    w[0] = 0x91;
-    w[1] = 0x51;
-    w[2] = _slot;
-    request(w, r, 3, 7);
-    int i;
-    for (i = 0; i < 4; i++)
-    {
-        u.b[i] = r[3+i];
-    }
-    return u.fVal;
-}
-float MeEncoderMotor::getCurrentPosition()
-{
-    byte w[3] = {0};
-    byte r[7] = {0};
-    w[0] = 0x91;
-    w[1] = 0x52;
-    w[2] = _slot;
-    request(w, r, 3, 7);
-    int i;
-    for (i = 0; i < 4; i++)
-    {
-        u.b[i] = r[3+i];
-    }
-    return u.fVal;
-}
-float MeEncoderMotor::getPIDParam(uint8_t type, uint8_t mode)
-{
+    uint8_t w[18] = {0};
+    uint8_t r[10] = {0};
 
-    byte w[5] = {0};
-    byte r[9] = {0};
-    w[0] = 0x91;
-    w[1] = 0x53;
-    w[2] = _slot;
-    w[3] = type;
-    w[4] = mode;
-    request(w, r, 5, 9);
-    int i;
-    for (i = 0; i < 4; i++)
-    {
-        u.b[i] = r[5+i];
-    }
-    return u.fVal;
+    uint8_t data[10] = {0};
+    data[0] = _slot;
+    data[1] = ENCODER_MOTOR_MOVE_TO;
+    *((float *)(data + 2)) = angle;
+    *((float *)(data + 6)) = speed;
 
+    MeHost_Pack(w, 18, 0x01, data, 10);
+    request(w, r, 18, 10);
+    encoderParser.PushStr(r, 10);
+    encoderParser.Run();
+
+    uint8_t ack[2] = {0};
+    encoderParser.GetData(ack, 2);
+    return ack[1];
+}
+
+boolean MeEncoderMotor::Move(float angle, float speed)
+{
+    uint8_t w[18] = {0};
+    uint8_t r[10] = {0};
+
+    uint8_t data[10] = {0};
+    data[0] = _slot;
+    data[1] = ENCODER_MOTOR_MOVE;
+    *((float *)(data + 2)) = angle;
+    *((float *)(data + 6)) = speed;
+
+    MeHost_Pack(w, 18, 0x01, data, 10);
+    request(w, r, 18, 10);
+    encoderParser.PushStr(r, 10);
+    encoderParser.Run();
+
+    uint8_t ack[2] = {0};
+    encoderParser.GetData(ack, 2);
+    return ack[1];
+}
+
+boolean MeEncoderMotor::RunTurns(float turns, float speed)
+{
+    return Move(turns * 360, speed);
+}
+
+boolean MeEncoderMotor::RunSpeed(float speed)
+{
+    uint8_t w[14] = {0};
+    uint8_t r[10] = {0};
+
+    uint8_t data[6] = {0};
+    data[0] = _slot;
+    data[1] = ENCODER_MOTOR_RUN_STOP;
+    *((float *)(data + 2)) = speed;
+
+    MeHost_Pack(w, 14, 0x01, data, 6);
+    request(w, r, 14, 10);
+    encoderParser.PushStr(r, 10);
+    encoderParser.Run();
+
+    // uint8_t ack[2] = {0};
+    // encoderParser.GetData(ack, 2);
+    // return ack[1];
+    return 0;
+}
+
+boolean MeEncoderMotor::RunSpeedAndTime(float speed, float time)
+{
+    uint8_t w[18] = {0};
+    uint8_t r[10] = {0};
+
+    uint8_t data[10] = {0};
+    data[0] = _slot;
+    data[1] = ENCODER_MOTOR_SPEED_TIME;
+    *((float *)(data + 2)) = speed;
+    *((float *)(data + 6)) = time;
+
+    MeHost_Pack(w, 18, 0x01, data, 10);
+    request(w, r, 18, 10);
+    encoderParser.PushStr(r, 10);
+    encoderParser.Run();
+
+    // uint8_t ack[2] = {0};
+    // encoderParser.GetData(ack, 2);
+    // return ack[1];
+    return 0;
+}
+
+float MeEncoderMotor::GetCurrentSpeed()
+{
+    uint8_t w[10] = {0};
+    uint8_t r[14] = {0};
+
+    uint8_t data[2] = {0};
+    data[0] = _slot;
+    data[1] = ENCODER_MOTOR_GET_SPEED;
+
+    MeHost_Pack(w, 10, 0x01, data, 2);
+    request(w, r, 10, 14);
+    encoderParser.PushStr(r, 14);
+    encoderParser.Run();
+
+    uint8_t temp[6] = {0};
+    encoderParser.GetData(temp, 6);
+    float speed = *((float *)(temp + 2));
+    return speed;
+}
+
+float MeEncoderMotor::GetCurrentPosition()
+{
+    uint8_t w[10] = {0};
+    uint8_t r[14] = {0};
+
+    uint8_t data[2] = {0};
+    data[0] = _slot;
+    data[1] = ENCODER_MOTOR_GET_POS;
+
+    MeHost_Pack(w, 10, 0x01, data, 2);
+    request(w, r, 10, 14);
+    encoderParser.PushStr(r, 14);
+
+    encoderParser.Run();
+
+    uint8_t temp[6] = {0};
+    uint8_t size = encoderParser.GetData(temp, 6);
+    float pos = *((float *)(temp + 2));
+    return pos;
 }
 
 /*Me4Button*/
