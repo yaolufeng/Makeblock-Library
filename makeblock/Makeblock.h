@@ -382,28 +382,22 @@ private:
     volatile uint8_t *ws2812_port_reg;
     uint8_t pinMask;
 };
+
 ///@brief Class for Encoder Motor Driver
-class MeEncoderMotor: public MeWire
-{
-public:
-    MeEncoderMotor(uint8_t selector, uint8_t slot);
-    void begin();
-    boolean setCounter(uint8_t counter);
-    boolean setRatio(float ratio);
-    boolean setPID(float mp, float mi, float md, uint8_t mode);
-    boolean move(long degrees, float speed);
-    boolean moveTo(long degrees, float speed);
-    boolean runTurns(float turns);
-    boolean runSpeed(float speed);
-    boolean runSpeedAndTime(float speed, long time);
-    boolean setCommandFlag(boolean flag);
-    boolean resetEncoder();
-    boolean enableDebug();
-    float getCurrentSpeed();
-    float getCurrentPosition();
-    float getPIDParam(uint8_t type, uint8_t mode);
-private:
-    uint8_t _slot;
+class MeEncoderMotor: public MeWire{
+    public:
+        MeEncoderMotor(uint8_t addr,uint8_t slot);
+        void begin();
+        boolean Reset();
+        boolean Move(float angle, float speed);
+        boolean MoveTo(float angle, float speed);
+        boolean RunTurns(float turns, float speed);
+        boolean RunSpeed(float speed);
+        boolean RunSpeedAndTime(float speed, float time);
+        float GetCurrentSpeed();
+        float GetCurrentPosition();
+    private:
+        uint8_t _slot;    
 };
 
 ///@brief Class for Button Module
