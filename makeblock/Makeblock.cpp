@@ -2275,12 +2275,12 @@ MeTouchSensor::MeTouchSensor() : MePort(0) {}
 
 MeTouchSensor::MeTouchSensor(uint8_t port) : MePort(port) {}
 
-bool MeTouchSensor::Touchflag()
+bool MeTouchSensor::touchFlag()
 {   
     return MePort::dRead2();
 
 }
-bool MeTouchSensor::Touchmode(bool mode)
+bool MeTouchSensor::touchMode(bool mode)
 {   
     if (mode == 1)
     {
