@@ -620,8 +620,8 @@ class MeTouchSensor:public MePort
     public:
          MeTouchSensor();
          MeTouchSensor(uint8_t port) ;
-         bool Touchflag();
-         bool Touchmode(bool mode);
+         bool touchFlag();
+         bool touchMode(bool mode);
 
  };
 
