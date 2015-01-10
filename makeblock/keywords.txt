@@ -31,7 +31,7 @@ MeTemperature	KEYWORD1
 MeRGBLed	KEYWORD1
 MePIRMotionSensor	KEYWORD1
 MeGyro	KEYWORD1
-
+MeTouchSensor	KEYWORD1
 #######################################
 # Methods and Functions (KEYWORD2)
 #######################################
@@ -125,6 +125,8 @@ setColorAt	KEYWORD2
 getColorAt	KEYWORD2
 setNumber	KEYWORD2 
 getNumber	KEYWORD2
+Touchmode KEYWORD2
+Touchflag KEYWORD2
 #######################################
 # Constants (LITERAL1)
 #######################################
