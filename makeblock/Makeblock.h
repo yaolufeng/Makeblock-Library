@@ -614,4 +614,15 @@ private:
     double FREQ;
     uint8_t i2cData[14];
 };
+
+class MeTouchSensor:public MePort
+ {
+    public:
+         MeTouchSensor();
+         MeTouchSensor(uint8_t port) ;
+         bool Touchflag();
+         bool Touchmode(bool mode);
+
+ };
+
 #endif
