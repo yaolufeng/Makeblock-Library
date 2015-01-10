@@ -2271,3 +2271,24 @@ int MeGyro::writeReg(int reg, uint8_t data)
     return (error);
 }
 
+MeTouchSensor::MeTouchSensor() : MePort(0) {}
+
+MeTouchSensor::MeTouchSensor(uint8_t port) : MePort(port) {}
+
+bool MeTouchSensor::Touchflag()
+{   
+    return MePort::dRead2();
+
+}
+bool MeTouchSensor::Touchmode(bool mode)
+{   
+    if (mode == 1)
+    {
+        MePort::dWrite1(HIGH);
+    }
+    else
+    {
+        MePort::dWrite1(LOW);
+    } 
+    
+}
